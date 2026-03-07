@@ -12,11 +12,18 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import ravenrobotics.robot2026.commands.IntakeRoutineCommand;
+import ravenrobotics.robot2026.commands.IntakeRoutineCommand.IntakeRoutineMode;
+import ravenrobotics.robot2026.commands.FlywheelRoutineCommand;
 import ravenrobotics.robot2026.generated.TunerConstants;
 import ravenrobotics.robot2026.subsystems.CommandSwerveDrivetrain;
+import ravenrobotics.robot2026.subsystems.PivotSubsystem;
+import ravenrobotics.robot2026.subsystems.IntakeSubsystem;
+import ravenrobotics.robot2026.subsystems.FeederSubsystem;
+import ravenrobotics.robot2026.subsystems.FlywheelSubsystem;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -27,13 +34,32 @@ public class RobotContainer {
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
-    private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
-    private final Telemetry logger = new Telemetry(MaxSpeed);
+    private final DriveTelemetry logger = new DriveTelemetry(MaxSpeed);
 
     private final CommandXboxController joystick = new CommandXboxController(0);
 
-    public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    private final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    private final PivotSubsystem pivotSubsystem = new PivotSubsystem(); 
+    private final IntakeSubsystem intakeSubsystem = new IntakeSubsystem();
+    private final FeederSubsystem feederSubsystem = new FeederSubsystem();
+    private final FlywheelSubsystem flywheelSubsystem = new FlywheelSubsystem();
+
+    private IntakeRoutineCommand intakeDeployCommand = new IntakeRoutineCommand(
+        IntakeRoutineMode.INTAKE_DEPLOY,
+        pivotSubsystem,
+        intakeSubsystem,
+        feederSubsystem);
+    private IntakeRoutineCommand intakeRetractCommand = new IntakeRoutineCommand(IntakeRoutineMode.INTAKE_RETRACT, 
+        pivotSubsystem, 
+        intakeSubsystem, 
+        feederSubsystem);
+
+    private FlywheelRoutineCommand flywheelCommand = new FlywheelRoutineCommand(
+        flywheelSubsystem,
+        intakeSubsystem,
+        feederSubsystem
+    );
 
     public RobotContainer() {
         configureBindings();
@@ -58,20 +84,23 @@ public class RobotContainer {
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
 
-        joystick.a().whileTrue(drivetrain.applyRequest(() -> brake));
-        joystick.b().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))
-        ));
+        //SysID stuff
+        // // Run SysId routines when holding back/start and X/Y.
+        // // Note that each routine should be run exactly once in a single log.
+        // joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+        // joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
+        // joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+        // joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
-        // Run SysId routines when holding back/start and X/Y.
-        // Note that each routine should be run exactly once in a single log.
-        joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-        joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-        joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-        joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+        joystick.leftTrigger().whileTrue(intakeDeployCommand).onFalse(intakeRetractCommand);
+
+        joystick.rightTrigger().whileTrue(flywheelCommand);
 
         // Reset the field-centric heading on left bumper press.
-        joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        joystick.back().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+
+        // Set the brake
+        joystick.x().onTrue(drivetrain.runOnce(() -> drivetrain.setControl(brake)));
 
         drivetrain.registerTelemetry(logger::telemeterize);
     }
