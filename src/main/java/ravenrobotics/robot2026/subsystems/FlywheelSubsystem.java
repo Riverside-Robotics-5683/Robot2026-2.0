@@ -30,6 +30,8 @@ public class FlywheelSubsystem extends SubsystemBase {
 
     private final RelativeEncoder columnEncoder;
 
+    public double flywheelSpeed = 4000.0;
+
     public enum FlywheelState {
         FLYWHEEL_STOP,
         FLYWHEEL_IDLE,
@@ -53,6 +55,10 @@ public class FlywheelSubsystem extends SubsystemBase {
 
         columnEncoder = columnMotor.getEncoder();
 
+        DogLog.tunable("Flywheel/ManualSpeed", 0.0, (newSpeed) -> {
+            flywheelSpeed = newSpeed;
+        });
+
         this.register();
     }
 
@@ -69,7 +75,7 @@ public class FlywheelSubsystem extends SubsystemBase {
     }
 
     public boolean atSetpoint() {
-        return (Math.abs(centerFlywheelController.getSetpoint() - centerFlywheelEncoder.getVelocity()) < 100);
+        return (Math.abs(centerFlywheelController.getSetpoint() - centerFlywheelEncoder.getVelocity()) < 400);
     }
 
     public void runColumn(boolean isReverse) {

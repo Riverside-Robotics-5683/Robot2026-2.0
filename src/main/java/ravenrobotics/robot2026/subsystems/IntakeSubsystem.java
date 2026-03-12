@@ -57,15 +57,21 @@ public class IntakeSubsystem extends SubsystemBase {
     public void setIntakeDirection(IntakeDirection direction) {
         switch (direction) {
             case INTAKE_IN:
-                intakeMotor.set(1);
+                intakeMotor.set(-0.9);
                 break;
             case INTAKE_OUT:
-                intakeMotor.set(-1);
+                intakeMotor.set(0.9);
                 break;
             case INTAKE_STOP:
                 intakeMotor.stopMotor();
                 break;
         }
+    }
+
+    public Command setIntakeDirectionCommand(IntakeDirection direction) {
+        return this.runOnce(() -> {
+            setIntakeDirection(direction);
+        });
     }
     
     @Override

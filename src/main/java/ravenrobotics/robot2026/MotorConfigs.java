@@ -22,12 +22,16 @@ public class MotorConfigs {
         pivotConfig.MotorOutput.withInverted(InvertedValue.Clockwise_Positive)
             .withNeutralMode(NeutralModeValue.Brake);
         pivotConfig.CurrentLimits
-            .withStatorCurrentLimit(50)
-            .withSupplyCurrentLimit(50);
+            .withStatorCurrentLimit(20)
+            .withSupplyCurrentLimit(20);
         pivotConfig.Slot0
             .withKP(FeederAndIntakeConstants.PIVOT_KP)
             .withKI(FeederAndIntakeConstants.PIVOT_KI)
             .withKD(FeederAndIntakeConstants.PIVOT_KD);
+        pivotConfig.ClosedLoopRamps
+            .withVoltageClosedLoopRampPeriod(0.75)
+            .withTorqueClosedLoopRampPeriod(0.75)
+            .withDutyCycleClosedLoopRampPeriod(0.75);
 
         intakeConfig.MotorOutput.withInverted(InvertedValue.CounterClockwise_Positive)
             .withNeutralMode(NeutralModeValue.Coast);

@@ -63,16 +63,22 @@ public class FeederSubsystem extends SubsystemBase {
     public void setFeeder(FeederDirection direction) {
         switch (direction) {
             case FEEDER_IN:
-                feederMotor.set(1);
+                feederMotor.set(0.25);
                 break;
             case FEEDER_OUT:
-                feederMotor.set(-1);
+                feederMotor.set(-0.25);
                 break;
             case FEEDER_STOP:
                 feederMotor.stopMotor();
                 break;
         }
     }
+
+    public Command setFeederCommand(FeederDirection direction) {
+        return this.runOnce(() -> {
+            this.setFeeder(direction);
+        });
+    } 
 
     @Override
     public void periodic() {

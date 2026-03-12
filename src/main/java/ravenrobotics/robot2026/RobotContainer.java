@@ -7,20 +7,29 @@ package ravenrobotics.robot2026;
 import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import ravenrobotics.robot2026.commands.IntakeRoutineCommand;
 import ravenrobotics.robot2026.commands.IntakeRoutineCommand.IntakeRoutineMode;
 import ravenrobotics.robot2026.commands.FlywheelRoutineCommand;
 import ravenrobotics.robot2026.generated.TunerConstants;
 import ravenrobotics.robot2026.subsystems.CommandSwerveDrivetrain;
 import ravenrobotics.robot2026.subsystems.PivotSubsystem;
+import ravenrobotics.robot2026.subsystems.VisionSubsystem;
+import ravenrobotics.robot2026.subsystems.FeederSubsystem.FeederDirection;
+import ravenrobotics.robot2026.subsystems.IntakeSubsystem.IntakeDirection;
+import ravenrobotics.robot2026.subsystems.PivotSubsystem.PivotPosition;
 import ravenrobotics.robot2026.subsystems.IntakeSubsystem;
 import ravenrobotics.robot2026.subsystems.FeederSubsystem;
 import ravenrobotics.robot2026.subsystems.FlywheelSubsystem;
@@ -44,16 +53,19 @@ public class RobotContainer {
     private final IntakeSubsystem intakeSubsystem = new IntakeSubsystem();
     private final FeederSubsystem feederSubsystem = new FeederSubsystem();
     private final FlywheelSubsystem flywheelSubsystem = new FlywheelSubsystem();
+    private final VisionSubsystem VisionSubsystem = new VisionSubsystem(drivetrain::addVisionMeasurement);
 
     private IntakeRoutineCommand intakeDeployCommand = new IntakeRoutineCommand(
         IntakeRoutineMode.INTAKE_DEPLOY,
         pivotSubsystem,
         intakeSubsystem,
-        feederSubsystem);
+        feederSubsystem,
+        flywheelSubsystem);
     private IntakeRoutineCommand intakeRetractCommand = new IntakeRoutineCommand(IntakeRoutineMode.INTAKE_RETRACT, 
         pivotSubsystem, 
         intakeSubsystem, 
-        feederSubsystem);
+        feederSubsystem,
+        flywheelSubsystem);
 
     private FlywheelRoutineCommand flywheelCommand = new FlywheelRoutineCommand(
         flywheelSubsystem,
@@ -61,8 +73,20 @@ public class RobotContainer {
         feederSubsystem
     );
 
+    private SendableChooser<Command> autoChooser;
+
     public RobotContainer() {
         configureBindings();
+
+        drivetrain.configurePathPlanner();
+
+        while (!AutoBuilder.isConfigured()) continue;
+
+        NamedCommands.registerCommand("deployIntake", pivotSubsystem.setPivotCommand(PivotPosition.PIVOT_OUT));
+
+        autoChooser = AutoBuilder.buildAutoChooser("Test Auto");
+
+        SmartDashboard.putData("Auto Chooser", autoChooser);
     }
 
     private void configureBindings() {
@@ -85,19 +109,23 @@ public class RobotContainer {
         );
 
         //SysID stuff
-        // // Run SysId routines when holding back/start and X/Y.
-        // // Note that each routine should be run exactly once in a single log.
-        // joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-        // joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-        // joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-        // joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+        // Run SysId routines when holding back/start and X/Y.
+        // Note that each routine should be run exactly once in a single log.
+        joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+        joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
+        joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+        joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
-        joystick.leftTrigger().whileTrue(intakeDeployCommand).onFalse(intakeRetractCommand);
+        joystick.leftTrigger().whileTrue(intakeDeployCommand).onFalse(new InstantCommand(() -> intakeDeployCommand.cancel()));//.onFalse(intakeRetractCommand);
+        joystick.leftBumper().whileTrue(intakeSubsystem.setIntakeDirectionCommand(IntakeDirection.INTAKE_OUT)).onFalse(intakeSubsystem.setIntakeDirectionCommand(IntakeDirection.INTAKE_STOP));
+
+        joystick.povDown().whileTrue(feederSubsystem.setFeederCommand(FeederDirection.FEEDER_OUT).alongWith(new InstantCommand(() -> flywheelSubsystem.runColumn(true))))
+            .onFalse(feederSubsystem.setFeederCommand(FeederDirection.FEEDER_STOP).alongWith(new InstantCommand(() -> flywheelSubsystem.stopColumn())));
 
         joystick.rightTrigger().whileTrue(flywheelCommand);
 
         // Reset the field-centric heading on left bumper press.
-        joystick.back().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        //joystick.back().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
         // Set the brake
         joystick.x().onTrue(drivetrain.runOnce(() -> drivetrain.setControl(brake)));
@@ -106,21 +134,6 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        // Simple drive forward auton
-        final var idle = new SwerveRequest.Idle();
-        return Commands.sequence(
-            // Reset our field centric heading to match the robot
-            // facing away from our alliance station wall (0 deg).
-            drivetrain.runOnce(() -> drivetrain.seedFieldCentric(Rotation2d.kZero)),
-            // Then slowly drive forward (away from us) for 5 seconds.
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(0.5)
-                    .withVelocityY(0)
-                    .withRotationalRate(0)
-            )
-            .withTimeout(5.0),
-            // Finally idle for the rest of auton
-            drivetrain.applyRequest(() -> idle)
-        );
+        return autoChooser.getSelected();
     }
 }

@@ -61,7 +61,7 @@ public class PivotSubsystem extends SubsystemBase {
      */
     public PivotSubsystem() {
         // Initialize intake motors.
-        pivotMotor = new TalonFX(FeederAndIntakeConstants.FEEDER_MOTOR, new CANBus("rio"));
+        pivotMotor = new TalonFX(FeederAndIntakeConstants.PIVOT_MOTOR, new CANBus("rio"));
 
         // Configure intake motors.
         pivotMotor.getConfigurator().apply(MotorConfigs.pivotConfig);
@@ -104,8 +104,14 @@ public class PivotSubsystem extends SubsystemBase {
         }
     }
 
+    public Command setPivotCommand(PivotPosition position) {
+        return this.runOnce(() -> {
+            this.setPivot(position);
+        });
+    }
+
     public boolean atSetpoint() {
-        return (Math.abs(pivotPosition.getValueAsDouble() - motorRequest.Position) < 0.75);
+        return (Math.abs(pivotPosition.getValueAsDouble() - motorRequest.Position) < 0.5);
     }
 
     @Override

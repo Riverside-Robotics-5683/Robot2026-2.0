@@ -21,7 +21,7 @@ public class FlywheelRoutineCommand extends Command {
 
     @Override
     public void execute() {
-        flywheelSubsystem.runFlywheel(4000);
+        flywheelSubsystem.runFlywheel(flywheelSubsystem.flywheelSpeed);
 
         if (flywheelSubsystem.atSetpoint()) {
             flywheelSubsystem.runColumn(false);
