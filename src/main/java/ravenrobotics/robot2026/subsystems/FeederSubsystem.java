@@ -12,7 +12,7 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import dev.doglog.DogLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import ravenrobotics.robot2026.Constants.FeederAndIntakeConstants;
+import ravenrobotics.robot2026.Constants.FeederConstants;
 import ravenrobotics.robot2026.MotorConfigs;
 
 /**
@@ -49,7 +49,7 @@ public class FeederSubsystem extends SubsystemBase {
      */
     public FeederSubsystem() {
         // Initialize feeder motor.
-        feederMotor = new SparkFlex(FeederAndIntakeConstants.FEEDER_MOTOR, MotorType.kBrushless);
+        feederMotor = new SparkFlex(FeederConstants.FEEDER_MOTOR, MotorType.kBrushless);
 
         // Configure feeder motor.
         feederMotor.configure(MotorConfigs.feederConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);

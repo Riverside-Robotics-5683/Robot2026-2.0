@@ -8,7 +8,6 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.controls.PositionDutyCycle;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -18,11 +17,10 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Frequency;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import ravenrobotics.robot2026.MotorConfigs;
-import ravenrobotics.robot2026.Constants.FeederAndIntakeConstants;
+import ravenrobotics.robot2026.Constants.PivotConstants;
 
 /**
  * Subsystem for controlling the feeder and intake mechanisms.
@@ -32,7 +30,7 @@ public class PivotSubsystem extends SubsystemBase {
     // Intake motors.
     private final TalonFX pivotMotor;
 
-    private PositionVoltage motorRequest = new PositionVoltage(FeederAndIntakeConstants.PIVOT_IN).withSlot(0);
+    private PositionVoltage motorRequest = new PositionVoltage(PivotConstants.PIVOT_IN).withSlot(0);
 
     // Pivot encoder signals.
     private final StatusSignal<Angle> pivotPosition;
@@ -53,7 +51,19 @@ public class PivotSubsystem extends SubsystemBase {
         /**
          * Deploys the intake.
          */
-        PIVOT_OUT
+        PIVOT_OUT,
+        /**
+         * The high position for the pivot when moving during shooting.
+         */
+        PIVOT_SHOOT_HIGH,
+        /**
+         * The low position for the pivot when moving during shooting.
+         */
+        PIVOT_SHOOT_LOW,
+        /**
+         * Stops the pivot.
+         */
+        PIVOT_STOP
     }
 
     /**
@@ -61,7 +71,7 @@ public class PivotSubsystem extends SubsystemBase {
      */
     public PivotSubsystem() {
         // Initialize intake motors.
-        pivotMotor = new TalonFX(FeederAndIntakeConstants.PIVOT_MOTOR, new CANBus("rio"));
+        pivotMotor = new TalonFX(PivotConstants.PIVOT_MOTOR, new CANBus("rio"));
 
         // Configure intake motors.
         pivotMotor.getConfigurator().apply(MotorConfigs.pivotConfig);
@@ -95,12 +105,11 @@ public class PivotSubsystem extends SubsystemBase {
 
     public void setPivot(PivotPosition position) {
         switch (position) {
-            case PIVOT_IN:
-                pivotMotor.setControl(motorRequest.withPosition(FeederAndIntakeConstants.PIVOT_IN));
-                break;
-            case PIVOT_OUT:
-                pivotMotor.setControl(motorRequest.withPosition(FeederAndIntakeConstants.PIVOT_OUT));
-                break;
+            case PIVOT_IN -> pivotMotor.setControl(motorRequest.withPosition(PivotConstants.PIVOT_IN));
+            case PIVOT_OUT -> pivotMotor.setControl(motorRequest.withPosition(PivotConstants.PIVOT_OUT));
+            case PIVOT_SHOOT_HIGH -> pivotMotor.setControl(motorRequest.withPosition(PivotConstants.PIVOT_SHOOT_HIGH));
+            case PIVOT_SHOOT_LOW -> pivotMotor.setControl(motorRequest.withPosition(PivotConstants.PIVOT_SHOOT_LOW));
+            case PIVOT_STOP -> pivotMotor.stopMotor();
         }
     }
 
@@ -116,19 +125,19 @@ public class PivotSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        // // Refresh all of the signals for processing.
-        // BaseStatusSignal.refreshAll(
-        //     pivotPosition,
-        //     pivotStatorCurrent,
-        //     pivotSupplyCurrent
-        // );
+        // Refresh all of the signals for processing.
+        BaseStatusSignal.refreshAll(
+            pivotPosition,
+            pivotStatorCurrent,
+            pivotSupplyCurrent
+        );
 
-        // // Pivot encoder.
-        // DogLog.log("Intake/Pivot/Position", pivotPosition.getValueAsDouble(), Rotations);
-        // DogLog.log("Intake/Pivot/Velocity", pivotVelocity.getValueAsDouble(), RotationsPerSecond);
+        // Pivot encoder.
+        DogLog.log("Intake/Pivot/Position", pivotPosition.getValueAsDouble(), Rotations);
+        DogLog.log("Intake/Pivot/Velocity", pivotVelocity.getValueAsDouble(), RotationsPerSecond);
 
-        // // Pivot currents.
-        // DogLog.log("Intake/Pivot/StatorCurrent", pivotStatorCurrent.getValueAsDouble(), Amps);
-        // DogLog.log("Intake/Pivot/SupplyCurrent", pivotSupplyCurrent.getValueAsDouble(), Amps);
+        // Pivot currents.
+        DogLog.log("Intake/Pivot/StatorCurrent", pivotStatorCurrent.getValueAsDouble(), Amps);
+        DogLog.log("Intake/Pivot/SupplyCurrent", pivotSupplyCurrent.getValueAsDouble(), Amps);
     }
 }

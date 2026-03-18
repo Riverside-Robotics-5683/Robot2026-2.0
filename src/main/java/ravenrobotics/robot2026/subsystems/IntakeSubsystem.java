@@ -12,7 +12,7 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import ravenrobotics.robot2026.MotorConfigs;
-import ravenrobotics.robot2026.Constants.FeederAndIntakeConstants;
+import ravenrobotics.robot2026.Constants.IntakeConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
 
@@ -44,7 +44,7 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     public IntakeSubsystem() {
-        intakeMotor = new TalonFX(FeederAndIntakeConstants.INTAKE_MOTOR);
+        intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR);
 
         intakeMotor.getConfigurator().apply(MotorConfigs.intakeConfig);
 

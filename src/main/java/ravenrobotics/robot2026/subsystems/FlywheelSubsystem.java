@@ -12,12 +12,9 @@ import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import dev.doglog.DogLog;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import ravenrobotics.robot2026.MotorConfigs;
-import ravenrobotics.robot2026.RobotContainer;
-import ravenrobotics.robot2026.Constants.FlywheelAndHoodConstants;
+import ravenrobotics.robot2026.Constants.FlywheelConstants;
 
 public class FlywheelSubsystem extends SubsystemBase {
     
@@ -30,7 +27,9 @@ public class FlywheelSubsystem extends SubsystemBase {
 
     private final RelativeEncoder columnEncoder;
 
-    public double flywheelSpeed = 4000.0;
+    public double flywheelSpeed = 3000.0;
+
+    private boolean isIdle = true;
 
     public enum FlywheelState {
         FLYWHEEL_STOP,
@@ -39,9 +38,9 @@ public class FlywheelSubsystem extends SubsystemBase {
     }
 
     public FlywheelSubsystem() {
-        leftFlywheel = new SparkFlex(FlywheelAndHoodConstants.LEFT_FLYWHEEL_MOTOR, MotorType.kBrushless);
-        centerFlywheel = new SparkFlex(FlywheelAndHoodConstants.CENTER_FLYWHEEL_MOTOR, MotorType.kBrushless);
-        rightFlywheel = new SparkFlex(FlywheelAndHoodConstants.RIGHT_FLYWHEEL_MOTOR, MotorType.kBrushless);
+        leftFlywheel = new SparkFlex(FlywheelConstants.LEFT_FLYWHEEL_MOTOR, MotorType.kBrushless);
+        centerFlywheel = new SparkFlex(FlywheelConstants.CENTER_FLYWHEEL_MOTOR, MotorType.kBrushless);
+        rightFlywheel = new SparkFlex(FlywheelConstants.RIGHT_FLYWHEEL_MOTOR, MotorType.kBrushless);
 
         centerFlywheel.configure(MotorConfigs.flywheelConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         leftFlywheel.configure(MotorConfigs.flywheelConfig.follow(centerFlywheel, false), ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -50,24 +49,26 @@ public class FlywheelSubsystem extends SubsystemBase {
         centerFlywheelEncoder = centerFlywheel.getEncoder();
         centerFlywheelController = centerFlywheel.getClosedLoopController();
 
-        columnMotor = new SparkFlex(FlywheelAndHoodConstants.COLUMN_MOTOR, MotorType.kBrushless);
+        columnMotor = new SparkFlex(FlywheelConstants.COLUMN_MOTOR, MotorType.kBrushless);
         columnMotor.configure(MotorConfigs.columnConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         columnEncoder = columnMotor.getEncoder();
 
-        DogLog.tunable("Flywheel/ManualSpeed", 0.0, (newSpeed) -> {
-            flywheelSpeed = newSpeed;
+        DogLog.tunable("Flywheel/ManualSpeed", flywheelSpeed, (newSpeed) -> {
+            this.flywheelSpeed = newSpeed;
         });
 
         this.register();
     }
 
     public void runFlywheel(double speed) {
+        isIdle = false;
         centerFlywheelController.setSetpoint(speed, ControlType.kVelocity);
     }
 
     public void idleFlywheel() {
-        centerFlywheelController.setSetpoint(FlywheelAndHoodConstants.FLYWHEEL_IDLE, ControlType.kVelocity);
+        isIdle = true;
+        centerFlywheelController.setSetpoint(FlywheelConstants.FLYWHEEL_IDLE, ControlType.kVelocity);
     }
 
     public void stopFlywheel() {
@@ -75,7 +76,7 @@ public class FlywheelSubsystem extends SubsystemBase {
     }
 
     public boolean atSetpoint() {
-        return (Math.abs(centerFlywheelController.getSetpoint() - centerFlywheelEncoder.getVelocity()) < 400);
+        return !isIdle && (Math.abs(centerFlywheelController.getSetpoint() - centerFlywheelEncoder.getVelocity()) < 400);
     }
 
     public void runColumn(boolean isReverse) {
@@ -92,7 +93,6 @@ public class FlywheelSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-
         double flywheelVelocity;
         double leftFlywheelCurrent, centerFlywheelCurrent, rightFlywheelCurrent;
 
@@ -115,5 +115,7 @@ public class FlywheelSubsystem extends SubsystemBase {
 
         DogLog.log("Flywheel/Column/Velocity", columnVelocity, RPM);
         DogLog.log("Flywheel/Column/Current", columnCurrent, Amps);
+
+        DogLog.log("Flywheel/AtSetpoint", atSetpoint());
     }
 }

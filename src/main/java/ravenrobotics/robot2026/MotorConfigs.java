@@ -5,10 +5,11 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
-import ravenrobotics.robot2026.Constants.FeederAndIntakeConstants;
-import ravenrobotics.robot2026.Constants.FlywheelAndHoodConstants;
+import ravenrobotics.robot2026.Constants.PivotConstants;
+import ravenrobotics.robot2026.Constants.FlywheelConstants;
 
 public class MotorConfigs {
     public static final TalonFXConfiguration pivotConfig = new TalonFXConfiguration();
@@ -18,6 +19,8 @@ public class MotorConfigs {
     public static final SparkFlexConfig flywheelConfig = new SparkFlexConfig();
     public static final SparkFlexConfig columnConfig = new SparkFlexConfig();
 
+    public static final SparkMaxConfig actuatorConfig = new SparkMaxConfig();
+
     static {
         pivotConfig.MotorOutput.withInverted(InvertedValue.Clockwise_Positive)
             .withNeutralMode(NeutralModeValue.Brake);
@@ -25,9 +28,9 @@ public class MotorConfigs {
             .withStatorCurrentLimit(20)
             .withSupplyCurrentLimit(20);
         pivotConfig.Slot0
-            .withKP(FeederAndIntakeConstants.PIVOT_KP)
-            .withKI(FeederAndIntakeConstants.PIVOT_KI)
-            .withKD(FeederAndIntakeConstants.PIVOT_KD);
+            .withKP(PivotConstants.PIVOT_KP)
+            .withKI(PivotConstants.PIVOT_KI)
+            .withKD(PivotConstants.PIVOT_KD);
         pivotConfig.ClosedLoopRamps
             .withVoltageClosedLoopRampPeriod(0.75)
             .withTorqueClosedLoopRampPeriod(0.75)
@@ -47,12 +50,22 @@ public class MotorConfigs {
             .inverted(true);
         flywheelConfig.closedLoop.outputRange(-1, 1)
             .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-            .p(FlywheelAndHoodConstants.FLYWHEEL_KP)
-            .i(FlywheelAndHoodConstants.FLYWHEEL_KI)
-            .d(FlywheelAndHoodConstants.FLYWHEEL_KD);
+            .p(FlywheelConstants.FLYWHEEL_KP)
+            .i(FlywheelConstants.FLYWHEEL_KI)
+            .d(FlywheelConstants.FLYWHEEL_KD);
 
         columnConfig.smartCurrentLimit(50)
             .idleMode(IdleMode.kCoast)
             .inverted(false);
+
+        actuatorConfig.smartCurrentLimit(1, 1)
+            .inverted(false)
+            .idleMode(IdleMode.kCoast);
+
+        actuatorConfig.closedLoop.feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
+            .outputRange(-1, 1)
+            .p(1.0)
+            .i(0.0)
+            .d(0.0);
     }
 }

@@ -11,18 +11,16 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import ravenrobotics.robot2026.Superstructure.SuperstructureState;
 import ravenrobotics.robot2026.commands.IntakeRoutineCommand;
 import ravenrobotics.robot2026.commands.IntakeRoutineCommand.IntakeRoutineMode;
-import ravenrobotics.robot2026.commands.FlywheelRoutineCommand;
 import ravenrobotics.robot2026.generated.TunerConstants;
 import ravenrobotics.robot2026.subsystems.CommandSwerveDrivetrain;
 import ravenrobotics.robot2026.subsystems.PivotSubsystem;
@@ -33,6 +31,7 @@ import ravenrobotics.robot2026.subsystems.PivotSubsystem.PivotPosition;
 import ravenrobotics.robot2026.subsystems.IntakeSubsystem;
 import ravenrobotics.robot2026.subsystems.FeederSubsystem;
 import ravenrobotics.robot2026.subsystems.FlywheelSubsystem;
+import ravenrobotics.robot2026.subsystems.HoodSubsystem;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -48,12 +47,22 @@ public class RobotContainer {
 
     private final CommandXboxController joystick = new CommandXboxController(0);
 
-    private final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     private final PivotSubsystem pivotSubsystem = new PivotSubsystem(); 
     private final IntakeSubsystem intakeSubsystem = new IntakeSubsystem();
     private final FeederSubsystem feederSubsystem = new FeederSubsystem();
     private final FlywheelSubsystem flywheelSubsystem = new FlywheelSubsystem();
+    private final HoodSubsystem hoodSubsystem = new HoodSubsystem();
+    @SuppressWarnings("unused")
     private final VisionSubsystem VisionSubsystem = new VisionSubsystem(drivetrain::addVisionMeasurement);
+
+    private final Superstructure superStructure = new Superstructure(
+        drivetrain,
+        feederSubsystem,
+        flywheelSubsystem,
+        hoodSubsystem,
+        intakeSubsystem,
+        pivotSubsystem);
 
     private IntakeRoutineCommand intakeDeployCommand = new IntakeRoutineCommand(
         IntakeRoutineMode.INTAKE_DEPLOY,
@@ -66,12 +75,6 @@ public class RobotContainer {
         intakeSubsystem, 
         feederSubsystem,
         flywheelSubsystem);
-
-    private FlywheelRoutineCommand flywheelCommand = new FlywheelRoutineCommand(
-        flywheelSubsystem,
-        intakeSubsystem,
-        feederSubsystem
-    );
 
     private SendableChooser<Command> autoChooser;
 
@@ -116,16 +119,18 @@ public class RobotContainer {
         joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
         joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
-        joystick.leftTrigger().whileTrue(intakeDeployCommand).onFalse(new InstantCommand(() -> intakeDeployCommand.cancel()));//.onFalse(intakeRetractCommand);
+        joystick.leftTrigger().whileTrue(superStructure.setStateCommand(SuperstructureState.INTAKE)).onFalse(superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
         joystick.leftBumper().whileTrue(intakeSubsystem.setIntakeDirectionCommand(IntakeDirection.INTAKE_OUT)).onFalse(intakeSubsystem.setIntakeDirectionCommand(IntakeDirection.INTAKE_STOP));
 
-        joystick.povDown().whileTrue(feederSubsystem.setFeederCommand(FeederDirection.FEEDER_OUT).alongWith(new InstantCommand(() -> flywheelSubsystem.runColumn(true))))
-            .onFalse(feederSubsystem.setFeederCommand(FeederDirection.FEEDER_STOP).alongWith(new InstantCommand(() -> flywheelSubsystem.stopColumn())));
+        joystick.y().onTrue(superStructure.setStateCommand(SuperstructureState.IDLE));
 
-        joystick.rightTrigger().whileTrue(flywheelCommand);
+        joystick.povUp().whileTrue(new InstantCommand(() -> hoodSubsystem.runActuators(false))).onFalse(new InstantCommand(() -> hoodSubsystem.stopActuators()));
+        joystick.povDown().whileTrue(new InstantCommand(() -> hoodSubsystem.runActuators(true))).onFalse(new InstantCommand(() -> hoodSubsystem.stopActuators()));
 
         // Reset the field-centric heading on left bumper press.
-        //joystick.back().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        joystick.back().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+
+        joystick.rightTrigger().whileTrue(superStructure.setStateCommand(SuperstructureState.SHOOT)).onFalse(superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
 
         // Set the brake
         joystick.x().onTrue(drivetrain.runOnce(() -> drivetrain.setControl(brake)));

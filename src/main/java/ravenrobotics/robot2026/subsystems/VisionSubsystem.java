@@ -13,7 +13,6 @@ import dev.doglog.DogLog;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.numbers.N1;
@@ -33,7 +32,6 @@ public class VisionSubsystem extends SubsystemBase {
     private Matrix<N3, N1> currentStdDevs;
 
     private final PoseEstimateConsumer poseConsumer;
-    private Pose2d estimatedPose;
 
     @FunctionalInterface
     public static interface PoseEstimateConsumer {
