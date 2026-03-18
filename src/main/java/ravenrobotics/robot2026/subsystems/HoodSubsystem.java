@@ -43,6 +43,20 @@ public class HoodSubsystem extends SubsystemBase {
         rightController.setSetpoint(targetPosition, ControlType.kPosition);
     }
 
+    public void testSetPosition(double position) {
+        targetPosition = position;
+
+        double currentPosition = hoodEncoder.getPosition();
+
+        if (currentPosition < position) {
+            rightActuator.set(1);
+        } else if (currentPosition > position) {
+            rightActuator.set(-1);
+        } else {
+            stopActuators();
+        }
+    }
+
     public void runActuators(boolean reverse) {
         if (reverse) {
             rightActuator.set(-1);
@@ -53,6 +67,10 @@ public class HoodSubsystem extends SubsystemBase {
 
     public boolean atSetpoint() {
         return rightController.isAtSetpoint();
+    }
+
+    public boolean testAtSetpoint() {
+        return Math.abs(hoodEncoder.getPosition() - targetPosition) < 0.001;
     }
 
     public void stopActuators() {

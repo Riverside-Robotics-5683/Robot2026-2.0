@@ -9,8 +9,6 @@ import com.pathplanner.lib.config.RobotConfig;
 import edu.wpi.first.math.InterpolatingMatrixTreeMap;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -68,8 +66,8 @@ public class Constants {
 
         public static final double FLYWHEEL_IDLE = 2500;
 
-        public static final Translation2d BLUE_HUB_POSE2D = new Translation2d(Meters.of(4.625), Meters.of(4.03));
-        public static final Translation2d RED_HUB_POSE2D = new Translation2d(Meters.of(4.625), Meters.of(4.03));
+        public static final Translation2d BLUE_HUB_POS = new Translation2d(Meters.of(4.625), Meters.of(4.03));
+        public static final Translation2d RED_HUB_POS = new Translation2d(Meters.of(4.625), Meters.of(4.03));
 
         public static final InterpolatingMatrixTreeMap<Double, N2, N1> SHOT_TREE = new InterpolatingMatrixTreeMap<>();
 

@@ -60,6 +60,7 @@ public class MotorConfigs {
 
         actuatorConfig.smartCurrentLimit(1, 1)
             .inverted(false)
+            .closedLoopRampRate(1)
             .idleMode(IdleMode.kCoast);
 
         actuatorConfig.closedLoop.feedbackSensor(FeedbackSensor.kAbsoluteEncoder)

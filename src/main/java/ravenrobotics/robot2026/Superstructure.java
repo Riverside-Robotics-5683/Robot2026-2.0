@@ -2,6 +2,8 @@ package ravenrobotics.robot2026;
 
 import static edu.wpi.first.units.Units.Meters;
 
+import java.util.Optional;
+
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.ctre.phoenix6.swerve.utility.PhoenixPIDController;
 
@@ -9,6 +11,7 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.wpilibj.Timer;
@@ -16,7 +19,6 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import ravenrobotics.robot2026.Constants.FlywheelConstants;
-import ravenrobotics.robot2026.commands.PIDToPoseCommand;
 import ravenrobotics.robot2026.subsystems.*;
 import ravenrobotics.robot2026.subsystems.FeederSubsystem.FeederDirection;
 import ravenrobotics.robot2026.subsystems.IntakeSubsystem.IntakeDirection;
@@ -46,7 +48,6 @@ public class Superstructure extends SubsystemBase {
         IDLE_INTAKE_OUT,
         OUTTAKE,
         SHOOT,
-        PASS,
     }
 
     public Superstructure(
@@ -135,22 +136,22 @@ public class Superstructure extends SubsystemBase {
     }
 
     private void shootState() {
-        FieldSide currFieldSide = getCurrentSide();
+        var currFieldSide = getCurrentSide();
+
+        if (currFieldSide.isEmpty()) return;
 
         Pose2d currentRobotState = driveSubsystem.getState().Pose;
 
         Rotation2d targetAngle;
 
-        if (currFieldSide == FieldSide.RED) {
+        if (currFieldSide.get() == Alliance.Red) {
             targetAngle = new Rotation2d(
-                FlywheelConstants.RED_HUB_POSE2D.getX() - currentRobotState.getX(),
-                FlywheelConstants.RED_HUB_POSE2D.getY() - currentRobotState.getY());
-        } else if (currFieldSide == FieldSide.BLUE) {
-            targetAngle = new Rotation2d(
-                FlywheelConstants.BLUE_HUB_POSE2D.getX() - currentRobotState.getX(),
-                FlywheelConstants.BLUE_HUB_POSE2D.getY() - currentRobotState.getY());
+                FlywheelConstants.RED_HUB_POS.getX() - currentRobotState.getX(),
+                FlywheelConstants.RED_HUB_POS.getY() - currentRobotState.getY());
         } else {
-            return;
+            targetAngle = new Rotation2d(
+                FlywheelConstants.BLUE_HUB_POS.getX() - currentRobotState.getX(),
+                FlywheelConstants.BLUE_HUB_POS.getY() - currentRobotState.getY());
         }
 
         boolean isAtRotation = false;
@@ -196,28 +197,27 @@ public class Superstructure extends SubsystemBase {
     private double getDistanceToHub() {
         double distanceToLocalHub = -1.0;
 
-        if (getCurrentSide() == FieldSide.BLUE) {
-            distanceToLocalHub = driveSubsystem.getState().Pose.getTranslation().getDistance(FlywheelConstants.BLUE_HUB_POSE2D);
-        } else if (getCurrentSide() == FieldSide.RED) {
-            distanceToLocalHub = driveSubsystem.getState().Pose.getTranslation().getDistance(FlywheelConstants.RED_HUB_POSE2D);
+        Translation2d driveTranslation = driveSubsystem.getState().Pose.getTranslation();
+        var currentSide = getCurrentSide();
+
+        if (currentSide.isEmpty()) return distanceToLocalHub;
+
+        if (currentSide.get() == Alliance.Red) {
+            distanceToLocalHub = driveTranslation.getDistance(FlywheelConstants.RED_HUB_POS);
+        } else {
+            distanceToLocalHub = driveTranslation.getDistance(FlywheelConstants.BLUE_HUB_POS);
         }
 
         return distanceToLocalHub;
     }
 
-    private enum FieldSide {
-        BLUE,
-        RED,
-        CENTER
-    }
-
-    private FieldSide getCurrentSide() {
+    private Optional<Alliance> getCurrentSide() {
         if (driveSubsystem.getState().Pose.getX() > 11) {
-            return FieldSide.RED;
+            return Optional.of(Alliance.Red);
         } else if (driveSubsystem.getState().Pose.getX() < 6) {
-            return FieldSide.BLUE;
+            return Optional.of(Alliance.Blue);
         } else {
-            return FieldSide.CENTER;
+            return Optional.empty();
         }
     }
 
