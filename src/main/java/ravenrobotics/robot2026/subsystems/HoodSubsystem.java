@@ -49,9 +49,9 @@ public class HoodSubsystem extends SubsystemBase {
         double currentPosition = hoodEncoder.getPosition();
 
         if (currentPosition < position) {
-            rightActuator.set(1);
+            rightActuator.set(0.75);
         } else if (currentPosition > position) {
-            rightActuator.set(-1);
+            rightActuator.set(-0.75);
         } else {
             stopActuators();
         }
@@ -70,7 +70,7 @@ public class HoodSubsystem extends SubsystemBase {
     }
 
     public boolean testAtSetpoint() {
-        return Math.abs(hoodEncoder.getPosition() - targetPosition) < 0.001;
+        return Math.abs(hoodEncoder.getPosition() - targetPosition) < 0.01;
     }
 
     public void stopActuators() {

@@ -42,7 +42,7 @@ public class Constants {
         public static final double PIVOT_KI = 0.0;
         public static final double PIVOT_KD = 0.5;
 
-        public static final double PIVOT_IN = 1;
+        public static final double PIVOT_IN = 0;
         public static final double PIVOT_OUT = 15.8;
 
         public static final double PIVOT_SHOOT_HIGH = 5;

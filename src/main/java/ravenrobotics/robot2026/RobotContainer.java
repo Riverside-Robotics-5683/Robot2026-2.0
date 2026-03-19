@@ -86,6 +86,9 @@ public class RobotContainer {
         while (!AutoBuilder.isConfigured()) continue;
 
         NamedCommands.registerCommand("deployIntake", pivotSubsystem.setPivotCommand(PivotPosition.PIVOT_OUT));
+        NamedCommands.registerCommand("ssIdle", superStructure.setStateCommand(SuperstructureState.IDLE));
+        NamedCommands.registerCommand("ssIdleIntakeOut", superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
+        NamedCommands.registerCommand("ssShoot", superStructure.setStateCommand(SuperstructureState.SHOOT));
 
         autoChooser = AutoBuilder.buildAutoChooser("Test Auto");
 
@@ -136,6 +139,10 @@ public class RobotContainer {
         joystick.x().onTrue(drivetrain.runOnce(() -> drivetrain.setControl(brake)));
 
         drivetrain.registerTelemetry(logger::telemeterize);
+    }
+
+    public void resetSS() {
+        superStructure.setState(SuperstructureState.IDLE);
     }
 
     public Command getAutonomousCommand() {

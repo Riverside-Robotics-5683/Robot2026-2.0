@@ -14,6 +14,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -40,6 +41,8 @@ public class Superstructure extends SubsystemBase {
     private SuperstructureState currentState = SuperstructureState.STOP;
 
     private PhoenixPIDController shootRotationController = new PhoenixPIDController(5.0, 0, 0);
+    private boolean pivotDirection = false;
+    private int pivotCounter = 0;
 
     public enum SuperstructureState {
         STOP,
@@ -83,7 +86,21 @@ public class Superstructure extends SubsystemBase {
             case INTAKE -> intakeState();
             case IDLE_INTAKE_OUT -> idleIntakeState();
             case OUTTAKE -> outtakeState();
-            case SHOOT -> shootState();
+            case SHOOT -> hubShootState();
+        }
+    }
+
+    private void handleShoot() {
+        var currentAlliance = DriverStation.getAlliance();
+        var currentSide = getCurrentSide();
+
+        if (currentAlliance.isEmpty()) return;
+        if (currentSide.isEmpty()) passShootState();
+
+        if (currentSide.get() == currentAlliance.get()) {
+            hubShootState();
+        } else {
+            passShootState();
         }
     }
 
@@ -135,7 +152,24 @@ public class Superstructure extends SubsystemBase {
         flywheelSubsystem.runColumn(true);
     }
 
-    private void shootState() {
+    private void passShootState() {
+        hoodSubsystem.testSetPosition(0.07);
+        flywheelSubsystem.runFlywheel(5000);
+
+        if (hoodSubsystem.testAtSetpoint() && flywheelSubsystem.atSetpoint()) {
+            hoodSubsystem.stopActuators();
+
+            flywheelSubsystem.runColumn(false);
+            feederSubsystem.setFeeder(FeederDirection.FEEDER_IN);
+
+            cycleShakePivot();
+        } else {
+            flywheelSubsystem.runColumn(true);
+            feederSubsystem.setFeeder(FeederDirection.FEEDER_STOP);
+        }
+    }
+
+    private void hubShootState() {
         var currFieldSide = getCurrentSide();
 
         if (currFieldSide.isEmpty()) return;
@@ -164,8 +198,6 @@ public class Superstructure extends SubsystemBase {
                 targetAngle.getRadians(),
                 timestamp);
 
-            System.out.println("Cmd: " + newRotation);
-
             driveSubsystem.setControl(new SwerveRequest.RobotCentric().withRotationalRate(newRotation));
 
             if (shootRotationController.atSetpoint()) isAtRotation = true;
@@ -175,22 +207,41 @@ public class Superstructure extends SubsystemBase {
 
         Matrix<N2, N1> shotParams = FlywheelConstants.SHOT_TREE.get(getDistanceToHub());
 
-        hoodSubsystem.setPosition(shotParams.get(1, 0));
+        flywheelSubsystem.runFlywheel(shotParams.get(0, 0) + 30);
+        hoodSubsystem.testSetPosition(shotParams.get(1, 0));
 
-        flywheelSubsystem.runFlywheel(shotParams.get(0, 0));
+        if (flywheelSubsystem.atSetpoint() && hoodSubsystem.testAtSetpoint()) {
+            hoodSubsystem.stopActuators();
 
-        System.out.println(shotParams.get(1, 0));
-
-        while (!hoodSubsystem.atSetpoint()) {
-            hoodSubsystem.setPosition(shotParams.get(1, 0));
-        }
-
-        if (flywheelSubsystem.atSetpoint()) {
             feederSubsystem.setFeeder(FeederDirection.FEEDER_IN);
             flywheelSubsystem.runColumn(false);
+
+            cycleShakePivot();
         } else {
             feederSubsystem.setFeeder(FeederDirection.FEEDER_STOP);
-            flywheelSubsystem.stopColumn();
+            flywheelSubsystem.runColumn(true);
+
+            hoodSubsystem.testSetPosition(shotParams.get(1, 0));
+        }
+    }
+
+    private void cycleShakePivot() {
+        pivotCounter++;
+
+        if (pivotCounter > 25) {
+            if (!pivotDirection) {
+                pivotDirection = true;
+            } else {
+                pivotDirection = false;
+            }
+
+            pivotCounter = 0;
+        }
+
+        if (pivotDirection) {
+            pivotSubsystem.setPivot(PivotPosition.PIVOT_SHOOT_LOW);
+        } else {
+            pivotSubsystem.setPivot(PivotPosition.PIVOT_SHOOT_HIGH);
         }
     }
 
@@ -227,6 +278,8 @@ public class Superstructure extends SubsystemBase {
         DogLog.log("Superstructure/PreviousState", previousState);
 
         DogLog.log("Superstructure/DistanceToHub", getDistanceToHub(), Meters);
+
+        DogLog.log("Superstructure/ShootState", getCurrentSide().isPresent());
 
         updateState();
     }
