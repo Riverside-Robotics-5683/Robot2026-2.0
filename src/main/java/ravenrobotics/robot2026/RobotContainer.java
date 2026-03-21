@@ -19,13 +19,10 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import ravenrobotics.robot2026.Superstructure.SuperstructureState;
-import ravenrobotics.robot2026.commands.IntakeRoutineCommand;
-import ravenrobotics.robot2026.commands.IntakeRoutineCommand.IntakeRoutineMode;
 import ravenrobotics.robot2026.generated.TunerConstants;
 import ravenrobotics.robot2026.subsystems.CommandSwerveDrivetrain;
 import ravenrobotics.robot2026.subsystems.PivotSubsystem;
 import ravenrobotics.robot2026.subsystems.VisionSubsystem;
-import ravenrobotics.robot2026.subsystems.FeederSubsystem.FeederDirection;
 import ravenrobotics.robot2026.subsystems.IntakeSubsystem.IntakeDirection;
 import ravenrobotics.robot2026.subsystems.PivotSubsystem.PivotPosition;
 import ravenrobotics.robot2026.subsystems.IntakeSubsystem;
@@ -63,18 +60,6 @@ public class RobotContainer {
         hoodSubsystem,
         intakeSubsystem,
         pivotSubsystem);
-
-    private IntakeRoutineCommand intakeDeployCommand = new IntakeRoutineCommand(
-        IntakeRoutineMode.INTAKE_DEPLOY,
-        pivotSubsystem,
-        intakeSubsystem,
-        feederSubsystem,
-        flywheelSubsystem);
-    private IntakeRoutineCommand intakeRetractCommand = new IntakeRoutineCommand(IntakeRoutineMode.INTAKE_RETRACT, 
-        pivotSubsystem, 
-        intakeSubsystem, 
-        feederSubsystem,
-        flywheelSubsystem);
 
     private SendableChooser<Command> autoChooser;
 

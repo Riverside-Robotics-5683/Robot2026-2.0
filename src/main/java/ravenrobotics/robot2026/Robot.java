@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import ravenrobotics.robot2026.util.HubShiftUtil;
 
 public class Robot extends TimedRobot {
     private Command autoCommand;
@@ -162,6 +163,8 @@ public class Robot extends TimedRobot {
         if (autoCommand != null) {
             CommandScheduler.getInstance().cancel(autoCommand);
         }
+
+        HubShiftUtil.initialize();
     }
 
     @Override

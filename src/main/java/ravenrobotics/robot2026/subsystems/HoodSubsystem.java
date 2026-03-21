@@ -7,9 +7,7 @@ import static edu.wpi.first.units.Units.Rotations;
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.PersistMode;
 import com.revrobotics.ResetMode;
-import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import dev.doglog.DogLog;
@@ -22,7 +20,6 @@ public class HoodSubsystem extends SubsystemBase {
     private final SparkMax rightActuator;
 
     private final AbsoluteEncoder hoodEncoder;
-    private final SparkClosedLoopController rightController;
 
     private double targetPosition = 0.0;
 
@@ -34,16 +31,9 @@ public class HoodSubsystem extends SubsystemBase {
         leftActuator.configure(MotorConfigs.actuatorConfig.follow(rightActuator), ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         hoodEncoder = rightActuator.getAbsoluteEncoder();
-        rightController = rightActuator.getClosedLoopController();
     }
 
     public void setPosition(double position) {
-        targetPosition = position;
-
-        rightController.setSetpoint(targetPosition, ControlType.kPosition);
-    }
-
-    public void testSetPosition(double position) {
         targetPosition = position;
 
         double currentPosition = hoodEncoder.getPosition();
@@ -66,10 +56,6 @@ public class HoodSubsystem extends SubsystemBase {
     }
 
     public boolean atSetpoint() {
-        return rightController.isAtSetpoint();
-    }
-
-    public boolean testAtSetpoint() {
         return Math.abs(hoodEncoder.getPosition() - targetPosition) < 0.01;
     }
 

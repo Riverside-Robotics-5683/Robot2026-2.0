@@ -46,7 +46,7 @@ public class Constants {
         public static final double PIVOT_OUT = 15.8;
 
         public static final double PIVOT_SHOOT_HIGH = 5;
-        public static final double PIVOT_SHOOT_LOW = 12;
+        public static final double PIVOT_SHOOT_LOW = 14;
     }
 
     public static class FeederConstants {
@@ -64,19 +64,32 @@ public class Constants {
         public static final double FLYWHEEL_KI = 0.0;
         public static final double FLYWHEEL_KD = 4.75;
 
-        public static final double FLYWHEEL_IDLE = 2500;
+        public static final double FLYWHEEL_HUB_IDLE = 1500;
+        public static final double FLYWHEEL_PASS_IDLE = 3000;
 
         public static final Translation2d BLUE_HUB_POS = new Translation2d(Meters.of(4.625), Meters.of(4.03));
         public static final Translation2d RED_HUB_POS = new Translation2d(Meters.of(4.625), Meters.of(4.03));
 
-        public static final InterpolatingMatrixTreeMap<Double, N2, N1> SHOT_TREE = new InterpolatingMatrixTreeMap<>();
+        public static final Translation2d BLUE_HIGH_POS = new Translation2d(Meters.of(2.401), Meters.of(6));
+        public static final Translation2d BLUE_LOW_POS = new Translation2d(Meters.of(2.401), Meters.of(2.5));
+
+        public static final Translation2d RED_HIGH_POS = new Translation2d(Meters.of(14.1), Meters.of(6));
+        public static final Translation2d RED_LOW_POS = new Translation2d(Meters.of(14.1), Meters.of(2.5));
+
+        public static final InterpolatingMatrixTreeMap<Double, N2, N1> HUB_SHOT_TREE = new InterpolatingMatrixTreeMap<>();
+        public static final InterpolatingMatrixTreeMap<Double, N2, N1> PASS_SHOT_TREE = new InterpolatingMatrixTreeMap<>();
 
         static {
-            SHOT_TREE.put(4.789, VecBuilder.fill(4150, 0.039));
-            SHOT_TREE.put(0.83, VecBuilder.fill(3200, 0));
-            SHOT_TREE.put(2.53, VecBuilder.fill(3500, 0.037));
-            SHOT_TREE.put(1.945, VecBuilder.fill(3000, 0.036));
-            SHOT_TREE.put(3.07, VecBuilder.fill(3500, 0.047));
+            HUB_SHOT_TREE.put(4.789, VecBuilder.fill(4150, 0.039));
+            HUB_SHOT_TREE.put(0.83, VecBuilder.fill(3200, 0));
+            HUB_SHOT_TREE.put(2.53, VecBuilder.fill(3500, 0.037));
+            HUB_SHOT_TREE.put(1.945, VecBuilder.fill(3000, 0.036));
+            HUB_SHOT_TREE.put(3.07, VecBuilder.fill(3500, 0.047));
+
+            PASS_SHOT_TREE.put(5.4, VecBuilder.fill(4500, 0.04));
+            PASS_SHOT_TREE.put(7.96, VecBuilder.fill(4500, 0.07));
+            PASS_SHOT_TREE.put(11.76, VecBuilder.fill(5500, 0.08));
+            PASS_SHOT_TREE.put(5.5, VecBuilder.fill(4000, 0.065));
         }
     }
 
@@ -87,6 +100,7 @@ public class Constants {
 
     public static class VisionConstants {
         public static final String FLYWHEEL_CAMERA = "flywheelCamera";
+        public static final String HOPPER_CAMERA = "hopperCamera";
 
         public static final Transform3d FLYWHEEL_CAMERA_OFFSET = new Transform3d(
             Inches.of(-1.210522),
@@ -94,7 +108,18 @@ public class Constants {
             Inches.of(22.136655),
             new Rotation3d(
                 Degrees.of(0),
-                Degrees.of(18.1),
+                Degrees.of(17),
+                Degrees.of(0)
+            )
+        );
+
+        public static final Transform3d HOPPER_CAMERA_OFFSET = new Transform3d(
+            Inches.of(-0.635606),
+            Inches.of(-0.026610),
+            Inches.of(14.990187),
+            new Rotation3d(
+                Degrees.of(0),
+                Degrees.of(25),
                 Degrees.of(0)
             )
         );

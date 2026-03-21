@@ -61,22 +61,15 @@
           }
         },
         {
-          "type": "parallel",
+          "type": "named",
           "data": {
-            "commands": [
-              {
-                "type": "named",
-                "data": {
-                  "name": "ssIdle"
-                }
-              },
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "Outpost to Shoot Audience Side"
-                }
-              }
-            ]
+            "name": "ssIdleIntakeOut"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Outpost to Shoot Audience Side"
           }
         },
         {

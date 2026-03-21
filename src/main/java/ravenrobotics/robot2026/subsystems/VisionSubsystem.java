@@ -25,11 +25,16 @@ public class VisionSubsystem extends SubsystemBase {
     private final AprilTagFieldLayout fieldLayout;
 
     private final PhotonCamera flywheelCamera;
+    private final PhotonCamera hopperCamera;
 
     private final PhotonPoseEstimator flywheelPoseEstimator;
+    private final PhotonPoseEstimator hopperPoseEstimator;
 
     private List<PhotonPipelineResult> flywheelResults;
-    private Matrix<N3, N1> currentStdDevs;
+    private List<PhotonPipelineResult> hopperResults;
+
+    private Matrix<N3, N1> flywheelCurrentStdDevs = VecBuilder.fill(0, 0, 0);
+    private Matrix<N3, N1> hopperCurrentStdDevs = VecBuilder.fill(0, 0, 0);
 
     private final PoseEstimateConsumer poseConsumer;
 
@@ -42,8 +47,10 @@ public class VisionSubsystem extends SubsystemBase {
         fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
 
         flywheelCamera = new PhotonCamera(VisionConstants.FLYWHEEL_CAMERA);
+        hopperCamera = new PhotonCamera(VisionConstants.HOPPER_CAMERA);
 
         flywheelPoseEstimator = new PhotonPoseEstimator(fieldLayout, VisionConstants.FLYWHEEL_CAMERA_OFFSET);
+        hopperPoseEstimator = new PhotonPoseEstimator(fieldLayout, VisionConstants.HOPPER_CAMERA_OFFSET);
 
         this.poseConsumer = estimatedPoseConsumer;
 
@@ -54,20 +61,20 @@ public class VisionSubsystem extends SubsystemBase {
     public void periodic() {
         flywheelResults = flywheelCamera.getAllUnreadResults();
 
-        Optional<EstimatedRobotPose> estimatedPose = Optional.empty();
+        Optional<EstimatedRobotPose> flywheelEstimatedPose = Optional.empty();
 
         for (var result: flywheelResults) {
-            estimatedPose = flywheelPoseEstimator.estimateCoprocMultiTagPose(result);
+            flywheelEstimatedPose = flywheelPoseEstimator.estimateCoprocMultiTagPose(result);
 
-            if (estimatedPose.isEmpty()) {
-                estimatedPose = flywheelPoseEstimator.estimateLowestAmbiguityPose(result);
+            if (flywheelEstimatedPose.isEmpty()) {
+                flywheelEstimatedPose = flywheelPoseEstimator.estimateLowestAmbiguityPose(result);
             }
 
-            updateEstimationStdDevs(estimatedPose, result.getTargets());
+            updateEstimationStdDevs(flywheelCurrentStdDevs, flywheelEstimatedPose, result.getTargets());
 
-            estimatedPose.ifPresent(
+            flywheelEstimatedPose.ifPresent(
                 est -> {
-                    var estStdDevs = getStdDevs();
+                    var estStdDevs = getFlywheelStdDevs();
 
                     poseConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
 
@@ -75,16 +82,44 @@ public class VisionSubsystem extends SubsystemBase {
                 }
             );
         }
+
+        hopperResults = hopperCamera.getAllUnreadResults();
+
+        Optional<EstimatedRobotPose> hopperEstimatedPose = Optional.empty();
+
+        for (var result: hopperResults) {
+            hopperEstimatedPose = hopperPoseEstimator.estimateCoprocMultiTagPose(result);
+
+            if (hopperEstimatedPose.isEmpty()) {
+                hopperEstimatedPose = hopperPoseEstimator.estimateLowestAmbiguityPose(result);
+            }
+
+            updateEstimationStdDevs(hopperCurrentStdDevs, hopperEstimatedPose, result.getTargets());
+
+            hopperEstimatedPose.ifPresent(
+                est -> {
+                    var estStdDevs = getHopperStdDevs();
+
+                    poseConsumer.accept(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
+
+                    DogLog.log("Vision/HopperEstimatedPosition", est.estimatedPose.toPose2d());
+                }
+            );
+        }
     }
 
-    public Matrix<N3, N1> getStdDevs() {
-        return currentStdDevs;
+    public Matrix<N3, N1> getFlywheelStdDevs() {
+        return flywheelCurrentStdDevs;
     }
 
-    private void updateEstimationStdDevs(Optional<EstimatedRobotPose> estimatedPose, List<PhotonTrackedTarget> targets) {
+    public Matrix<N3, N1> getHopperStdDevs() {
+        return hopperCurrentStdDevs;
+    }
+
+    private void updateEstimationStdDevs(Matrix<N3, N1> stdDevs, Optional<EstimatedRobotPose> estimatedPose, List<PhotonTrackedTarget> targets) {
         if (estimatedPose.isEmpty()) {
             // No pose input. Default to single-tag std devs
-            currentStdDevs = VisionConstants.singleTagDevs;
+            stdDevs = VisionConstants.singleTagDevs;
 
         } else {
             // Pose present. Start running Heuristic
@@ -107,7 +142,7 @@ public class VisionSubsystem extends SubsystemBase {
 
             if (numTags == 0) {
                 // No tags visible. Default to single-tag std devs
-                currentStdDevs = VisionConstants.singleTagDevs;
+                stdDevs = VisionConstants.singleTagDevs;
             } else {
                 // One or more tags visible, run the full heuristic.
                 avgDist /= numTags;
@@ -117,7 +152,7 @@ public class VisionSubsystem extends SubsystemBase {
                 if (numTags == 1 && avgDist > 4)
                     estStdDevs = VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
                 else estStdDevs = estStdDevs.times(1 + (avgDist * avgDist / 30));
-                currentStdDevs = estStdDevs;
+                stdDevs = estStdDevs;
             }
         }
     }

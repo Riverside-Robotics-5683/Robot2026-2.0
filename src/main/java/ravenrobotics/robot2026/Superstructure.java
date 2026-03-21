@@ -1,6 +1,7 @@
 package ravenrobotics.robot2026;
 
 import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.Seconds;
 
 import java.util.Optional;
 
@@ -22,8 +23,11 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import ravenrobotics.robot2026.Constants.FlywheelConstants;
 import ravenrobotics.robot2026.subsystems.*;
 import ravenrobotics.robot2026.subsystems.FeederSubsystem.FeederDirection;
+import ravenrobotics.robot2026.subsystems.FlywheelSubsystem.FlywheelIdleState;
 import ravenrobotics.robot2026.subsystems.IntakeSubsystem.IntakeDirection;
 import ravenrobotics.robot2026.subsystems.PivotSubsystem.PivotPosition;
+import ravenrobotics.robot2026.util.HubShiftUtil;
+import ravenrobotics.robot2026.util.HubShiftUtil.ShiftInfo;
 
 /**
  * Subsystem for high-level control of the robot. Heavily inspired from Team 360's SuperStructure subsystem in their 2026 robot code.
@@ -43,6 +47,11 @@ public class Superstructure extends SubsystemBase {
     private PhoenixPIDController shootRotationController = new PhoenixPIDController(5.0, 0, 0);
     private boolean pivotDirection = false;
     private int pivotCounter = 0;
+
+    private Timer shiftTimer = new Timer();
+
+    private double tunableRpm = 3000;
+    private double tunableHood = .05;
 
     public enum SuperstructureState {
         STOP,
@@ -67,6 +76,16 @@ public class Superstructure extends SubsystemBase {
         this.hoodSubsystem = hood;
         this.intakeSubsystem = intake;
         this.pivotSubsystem = pivot;
+
+        DogLog.tunable("Superstructure/Hood", tunableHood, (newHood) -> {
+            this.tunableHood = newHood;
+        });
+
+        DogLog.tunable("Superstructure/RPM", tunableRpm, (newRpm) -> {
+            this.tunableRpm = newRpm;
+        });
+
+        shiftTimer.reset();
     }
 
     public void setState(SuperstructureState newState) {
@@ -86,7 +105,7 @@ public class Superstructure extends SubsystemBase {
             case INTAKE -> intakeState();
             case IDLE_INTAKE_OUT -> idleIntakeState();
             case OUTTAKE -> outtakeState();
-            case SHOOT -> hubShootState();
+            case SHOOT -> handleShoot();
         }
     }
 
@@ -95,7 +114,10 @@ public class Superstructure extends SubsystemBase {
         var currentSide = getCurrentSide();
 
         if (currentAlliance.isEmpty()) return;
-        if (currentSide.isEmpty()) passShootState();
+        if (currentSide.isEmpty()) {
+            passShootState();
+            return;
+        }
 
         if (currentSide.get() == currentAlliance.get()) {
             hubShootState();
@@ -117,7 +139,8 @@ public class Superstructure extends SubsystemBase {
     }
 
     private void idleState() {
-        flywheelSubsystem.idleFlywheel();
+        handleFlywheelIdle();
+
         flywheelSubsystem.stopColumn();
 
         feederSubsystem.setFeeder(FeederDirection.FEEDER_STOP);
@@ -136,7 +159,8 @@ public class Superstructure extends SubsystemBase {
     }
 
     private void idleIntakeState() {
-        flywheelSubsystem.idleFlywheel();
+        handleFlywheelIdle();
+
         intakeSubsystem.setIntakeDirection(IntakeDirection.INTAKE_STOP);
         feederSubsystem.setFeeder(FeederDirection.FEEDER_STOP);
 
@@ -152,11 +176,33 @@ public class Superstructure extends SubsystemBase {
         flywheelSubsystem.runColumn(true);
     }
 
-    private void passShootState() {
-        hoodSubsystem.testSetPosition(0.07);
-        flywheelSubsystem.runFlywheel(5000);
+    private void handleFlywheelIdle() {
+        var currentSide = getCurrentSide();
+        var currentAlliance = DriverStation.getAlliance();
 
-        if (hoodSubsystem.testAtSetpoint() && flywheelSubsystem.atSetpoint()) {
+        if (currentAlliance.isEmpty()) {
+            flywheelSubsystem.idleFlywheel(FlywheelIdleState.HUB);
+            return;
+        }
+        if (currentSide.isEmpty()) {
+            flywheelSubsystem.idleFlywheel(FlywheelIdleState.PASS);
+            return;
+        }
+
+        if (currentSide.get() == currentAlliance.get()) {
+            flywheelSubsystem.idleFlywheel(FlywheelIdleState.HUB);
+        } else {
+            flywheelSubsystem.idleFlywheel(FlywheelIdleState.PASS);
+        }
+    }
+
+    private void passShootState() {
+        Matrix<N2, N1> shotParams = FlywheelConstants.PASS_SHOT_TREE.get(getPassDistance());
+
+        flywheelSubsystem.runFlywheel(shotParams.get(0, 0));
+        hoodSubsystem.setPosition(shotParams.get(1, 0));
+
+        if (hoodSubsystem.atSetpoint() && flywheelSubsystem.atSetpoint()) {
             hoodSubsystem.stopActuators();
 
             flywheelSubsystem.runColumn(false);
@@ -205,30 +251,32 @@ public class Superstructure extends SubsystemBase {
 
         driveSubsystem.setControl(new SwerveRequest.RobotCentric());
 
-        Matrix<N2, N1> shotParams = FlywheelConstants.SHOT_TREE.get(getDistanceToHub());
+        Matrix<N2, N1> shotParams = FlywheelConstants.HUB_SHOT_TREE.get(getDistanceToHub());
 
-        flywheelSubsystem.runFlywheel(shotParams.get(0, 0) + 30);
-        hoodSubsystem.testSetPosition(shotParams.get(1, 0));
+        flywheelSubsystem.runFlywheel(shotParams.get(0, 0));
+        hoodSubsystem.setPosition(shotParams.get(1, 0));
 
-        if (flywheelSubsystem.atSetpoint() && hoodSubsystem.testAtSetpoint()) {
+        if (flywheelSubsystem.atSetpoint() && hoodSubsystem.atSetpoint()) {
             hoodSubsystem.stopActuators();
+
+            driveSubsystem.setControl(new SwerveRequest.SwerveDriveBrake());
 
             feederSubsystem.setFeeder(FeederDirection.FEEDER_IN);
             flywheelSubsystem.runColumn(false);
 
             cycleShakePivot();
         } else {
-            feederSubsystem.setFeeder(FeederDirection.FEEDER_STOP);
+            feederSubsystem.setFeeder(FeederDirection.FEEDER_OUT);
             flywheelSubsystem.runColumn(true);
 
-            hoodSubsystem.testSetPosition(shotParams.get(1, 0));
+            hoodSubsystem.setPosition(shotParams.get(1, 0));
         }
     }
 
     private void cycleShakePivot() {
         pivotCounter++;
 
-        if (pivotCounter > 25) {
+        if (pivotCounter > 50) {
             if (!pivotDirection) {
                 pivotDirection = true;
             } else {
@@ -262,10 +310,37 @@ public class Superstructure extends SubsystemBase {
         return distanceToLocalHub;
     }
 
+    private double getPassDistance() {
+        double distanceToPass = -1.0;
+
+        Translation2d driveTranslation = driveSubsystem.getState().Pose.getTranslation();
+        var currentAlliance = DriverStation.getAlliance();
+
+        if (currentAlliance.isEmpty()) return distanceToPass;
+
+        if (currentAlliance.get() == Alliance.Blue) {
+            if (driveTranslation.getY() < 3.05) {
+                distanceToPass = driveTranslation.getDistance(FlywheelConstants.BLUE_LOW_POS);
+            } else if (driveTranslation.getY() > 5.0) {
+                distanceToPass = driveTranslation.getDistance(FlywheelConstants.BLUE_HIGH_POS);
+            }
+        } else {
+            if (driveTranslation.getY() < 3.05) {
+                distanceToPass = driveTranslation.getDistance(FlywheelConstants.RED_LOW_POS);
+            } else if (driveTranslation.getY() > 5.0) {
+                distanceToPass = driveTranslation.getDistance(FlywheelConstants.RED_HIGH_POS);
+            }
+        }
+
+        return distanceToPass;
+    }
+
     private Optional<Alliance> getCurrentSide() {
-        if (driveSubsystem.getState().Pose.getX() > 11) {
+        double driveX = driveSubsystem.getState().Pose.getX();
+
+        if (driveX > 11) {
             return Optional.of(Alliance.Red);
-        } else if (driveSubsystem.getState().Pose.getX() < 6) {
+        } else if (driveX < 6) {
             return Optional.of(Alliance.Blue);
         } else {
             return Optional.empty();
@@ -274,13 +349,21 @@ public class Superstructure extends SubsystemBase {
 
     @Override
     public void periodic() {
+        updateState();
+
+        DogLog.log("MatchTime", DriverStation.getMatchTime(), Seconds);
+
         DogLog.log("Superstructure/CurrentState", currentState);
         DogLog.log("Superstructure/PreviousState", previousState);
 
         DogLog.log("Superstructure/DistanceToHub", getDistanceToHub(), Meters);
+        DogLog.log("Superstructure/PassDistance", getPassDistance(), Meters);
 
         DogLog.log("Superstructure/ShootState", getCurrentSide().isPresent());
 
-        updateState();
+        ShiftInfo currentShift = HubShiftUtil.getOfficialShiftInfo();
+
+        DogLog.log("ShiftTime", currentShift.remainingTime(), Seconds);
+        DogLog.log("CurrentlyActive", currentShift.active());
     }
 }

@@ -37,6 +37,11 @@ public class FlywheelSubsystem extends SubsystemBase {
         FLYWHEEL_RUN
     }
 
+    public enum FlywheelIdleState {
+        HUB,
+        PASS
+    }
+
     public FlywheelSubsystem() {
         leftFlywheel = new SparkFlex(FlywheelConstants.LEFT_FLYWHEEL_MOTOR, MotorType.kBrushless);
         centerFlywheel = new SparkFlex(FlywheelConstants.CENTER_FLYWHEEL_MOTOR, MotorType.kBrushless);
@@ -66,9 +71,12 @@ public class FlywheelSubsystem extends SubsystemBase {
         centerFlywheelController.setSetpoint(speed, ControlType.kVelocity);
     }
 
-    public void idleFlywheel() {
+    public void idleFlywheel(FlywheelIdleState state) {
         isIdle = true;
-        centerFlywheelController.setSetpoint(FlywheelConstants.FLYWHEEL_IDLE, ControlType.kVelocity);
+        switch (state) {
+            case HUB -> centerFlywheelController.setSetpoint(FlywheelConstants.FLYWHEEL_HUB_IDLE, ControlType.kVelocity);
+            case PASS -> centerFlywheelController.setSetpoint(FlywheelConstants.FLYWHEEL_PASS_IDLE, ControlType.kVelocity);
+        }
     }
 
     public void stopFlywheel() {
