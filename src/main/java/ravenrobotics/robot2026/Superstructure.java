@@ -6,7 +6,7 @@ import static edu.wpi.first.units.Units.Seconds;
 import java.util.Optional;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
-import com.ctre.phoenix6.swerve.utility.PhoenixPIDController;
+import com.ctre.phoenix6.swerve.SwerveRequest.FieldCentricFacingAngle;
 
 import dev.doglog.DogLog;
 import edu.wpi.first.math.Matrix;
@@ -16,7 +16,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -44,11 +43,10 @@ public class Superstructure extends SubsystemBase {
     private SuperstructureState previousState = SuperstructureState.STOP;
     private SuperstructureState currentState = SuperstructureState.STOP;
 
-    private PhoenixPIDController shootRotationController = new PhoenixPIDController(5.0, 0, 0);
+    private FieldCentricFacingAngle rotationRequest = new FieldCentricFacingAngle();
+
     private boolean pivotDirection = false;
     private int pivotCounter = 0;
-
-    private Timer shiftTimer = new Timer();
 
     private double tunableRpm = 3000;
     private double tunableHood = .05;
@@ -85,7 +83,7 @@ public class Superstructure extends SubsystemBase {
             this.tunableRpm = newRpm;
         });
 
-        shiftTimer.reset();
+        rotationRequest.withHeadingPID(5.0, 0.0, 0.0);
     }
 
     public void setState(SuperstructureState newState) {
@@ -160,6 +158,7 @@ public class Superstructure extends SubsystemBase {
 
     private void idleIntakeState() {
         handleFlywheelIdle();
+        flywheelSubsystem.stopColumn();
 
         intakeSubsystem.setIntakeDirection(IntakeDirection.INTAKE_STOP);
         feederSubsystem.setFeeder(FeederDirection.FEEDER_STOP);
@@ -197,7 +196,17 @@ public class Superstructure extends SubsystemBase {
     }
 
     private void passShootState() {
-        Matrix<N2, N1> shotParams = FlywheelConstants.PASS_SHOT_TREE.get(getPassDistance());
+        double passDistance = getPassDistance();
+
+        // In the dead zone (Y between 3.05 and 5.0), structures block shots — hold idle instead
+        if (passDistance < 0) {
+            handleFlywheelIdle();
+            flywheelSubsystem.stopColumn();
+            feederSubsystem.setFeeder(FeederDirection.FEEDER_STOP);
+            return;
+        }
+
+        Matrix<N2, N1> shotParams = FlywheelConstants.PASS_SHOT_TREE.get(passDistance);
 
         flywheelSubsystem.runFlywheel(shotParams.get(0, 0));
         hoodSubsystem.setPosition(shotParams.get(1, 0));
@@ -216,47 +225,25 @@ public class Superstructure extends SubsystemBase {
     }
 
     private void hubShootState() {
-        var currFieldSide = getCurrentSide();
+        var alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
+        Pose2d currentPose = driveSubsystem.getState().Pose;
 
-        if (currFieldSide.isEmpty()) return;
+        Translation2d hubPos = (alliance == Alliance.Red)
+            ? FlywheelConstants.RED_HUB_POS
+            : FlywheelConstants.BLUE_HUB_POS;
 
-        Pose2d currentRobotState = driveSubsystem.getState().Pose;
+        Rotation2d targetAngle = new Rotation2d(
+            hubPos.getX() - currentPose.getX(),
+            hubPos.getY() - currentPose.getY());
 
-        Rotation2d targetAngle;
-
-        if (currFieldSide.get() == Alliance.Red) {
-            targetAngle = new Rotation2d(
-                FlywheelConstants.RED_HUB_POS.getX() - currentRobotState.getX(),
-                FlywheelConstants.RED_HUB_POS.getY() - currentRobotState.getY());
-        } else {
-            targetAngle = new Rotation2d(
-                FlywheelConstants.BLUE_HUB_POS.getX() - currentRobotState.getX(),
-                FlywheelConstants.BLUE_HUB_POS.getY() - currentRobotState.getY());
-        }
-
-        boolean isAtRotation = false;
-
-        while (!isAtRotation) {
-            double timestamp = Timer.getTimestamp();
-
-            double newRotation = shootRotationController.calculate(
-                driveSubsystem.getState().Pose.getRotation().getRadians(),
-                targetAngle.getRadians(),
-                timestamp);
-
-            driveSubsystem.setControl(new SwerveRequest.RobotCentric().withRotationalRate(newRotation));
-
-            if (shootRotationController.atSetpoint()) isAtRotation = true;
-        }
-
-        driveSubsystem.setControl(new SwerveRequest.RobotCentric());
+        driveSubsystem.setControl(rotationRequest.withTargetDirection(targetAngle));
 
         Matrix<N2, N1> shotParams = FlywheelConstants.HUB_SHOT_TREE.get(getDistanceToHub());
 
         flywheelSubsystem.runFlywheel(shotParams.get(0, 0));
         hoodSubsystem.setPosition(shotParams.get(1, 0));
 
-        if (flywheelSubsystem.atSetpoint() && hoodSubsystem.atSetpoint()) {
+        if (rotationRequest.HeadingController.atSetpoint() && flywheelSubsystem.atSetpoint() && hoodSubsystem.atSetpoint()) {
             hoodSubsystem.stopActuators();
 
             driveSubsystem.setControl(new SwerveRequest.SwerveDriveBrake());

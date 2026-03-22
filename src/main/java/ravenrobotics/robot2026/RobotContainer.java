@@ -68,7 +68,9 @@ public class RobotContainer {
 
         drivetrain.configurePathPlanner();
 
-        while (!AutoBuilder.isConfigured()) continue;
+        if (!AutoBuilder.isConfigured()) {
+            throw new RuntimeException("AutoBuilder failed to configure after configurePathPlanner()");
+        }
 
         NamedCommands.registerCommand("deployIntake", pivotSubsystem.setPivotCommand(PivotPosition.PIVOT_OUT));
         NamedCommands.registerCommand("ssIdle", superStructure.setStateCommand(SuperstructureState.IDLE));

@@ -68,7 +68,7 @@ public class Constants {
         public static final double FLYWHEEL_PASS_IDLE = 3000;
 
         public static final Translation2d BLUE_HUB_POS = new Translation2d(Meters.of(4.625), Meters.of(4.03));
-        public static final Translation2d RED_HUB_POS = new Translation2d(Meters.of(4.625), Meters.of(4.03));
+        public static final Translation2d RED_HUB_POS = new Translation2d(Meters.of(11.91), Meters.of(4.03));
 
         public static final Translation2d BLUE_HIGH_POS = new Translation2d(Meters.of(2.401), Meters.of(6));
         public static final Translation2d BLUE_LOW_POS = new Translation2d(Meters.of(2.401), Meters.of(2.5));

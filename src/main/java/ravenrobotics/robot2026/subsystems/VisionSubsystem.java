@@ -70,7 +70,7 @@ public class VisionSubsystem extends SubsystemBase {
                 flywheelEstimatedPose = flywheelPoseEstimator.estimateLowestAmbiguityPose(result);
             }
 
-            updateEstimationStdDevs(flywheelCurrentStdDevs, flywheelEstimatedPose, result.getTargets());
+            flywheelCurrentStdDevs = computeEstimationStdDevs(flywheelEstimatedPose, result.getTargets());
 
             flywheelEstimatedPose.ifPresent(
                 est -> {
@@ -94,7 +94,7 @@ public class VisionSubsystem extends SubsystemBase {
                 hopperEstimatedPose = hopperPoseEstimator.estimateLowestAmbiguityPose(result);
             }
 
-            updateEstimationStdDevs(hopperCurrentStdDevs, hopperEstimatedPose, result.getTargets());
+            hopperCurrentStdDevs = computeEstimationStdDevs(hopperEstimatedPose, result.getTargets());
 
             hopperEstimatedPose.ifPresent(
                 est -> {
@@ -116,44 +116,41 @@ public class VisionSubsystem extends SubsystemBase {
         return hopperCurrentStdDevs;
     }
 
-    private void updateEstimationStdDevs(Matrix<N3, N1> stdDevs, Optional<EstimatedRobotPose> estimatedPose, List<PhotonTrackedTarget> targets) {
+    private Matrix<N3, N1> computeEstimationStdDevs(Optional<EstimatedRobotPose> estimatedPose, List<PhotonTrackedTarget> targets) {
         if (estimatedPose.isEmpty()) {
-            // No pose input. Default to single-tag std devs
-            stdDevs = VisionConstants.singleTagDevs;
-
-        } else {
-            // Pose present. Start running Heuristic
-            var estStdDevs = VisionConstants.singleTagDevs;
-            int numTags = 0;
-            double avgDist = 0;
-
-            // Precalculation - see how many tags we found, and calculate an average-distance metric
-            for (var tgt : targets) {
-                var tagPose = flywheelPoseEstimator.getFieldTags().getTagPose(tgt.getFiducialId());
-                if (tagPose.isEmpty()) continue;
-                numTags++;
-                avgDist +=
-                        tagPose
-                                .get()
-                                .toPose2d()
-                                .getTranslation()
-                                .getDistance(estimatedPose.get().estimatedPose.toPose2d().getTranslation());
-            }
-
-            if (numTags == 0) {
-                // No tags visible. Default to single-tag std devs
-                stdDevs = VisionConstants.singleTagDevs;
-            } else {
-                // One or more tags visible, run the full heuristic.
-                avgDist /= numTags;
-                // Decrease std devs if multiple targets are visible
-                if (numTags > 1) estStdDevs = VisionConstants.multiTagDevs;
-                // Increase std devs based on (average) distance
-                if (numTags == 1 && avgDist > 4)
-                    estStdDevs = VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
-                else estStdDevs = estStdDevs.times(1 + (avgDist * avgDist / 30));
-                stdDevs = estStdDevs;
-            }
+            return VisionConstants.singleTagDevs;
         }
+
+        // Pose present. Start running Heuristic
+        var estStdDevs = VisionConstants.singleTagDevs;
+        int numTags = 0;
+        double avgDist = 0;
+
+        // Precalculation - see how many tags we found, and calculate an average-distance metric
+        for (var tgt : targets) {
+            var tagPose = flywheelPoseEstimator.getFieldTags().getTagPose(tgt.getFiducialId());
+            if (tagPose.isEmpty()) continue;
+            numTags++;
+            avgDist +=
+                    tagPose
+                            .get()
+                            .toPose2d()
+                            .getTranslation()
+                            .getDistance(estimatedPose.get().estimatedPose.toPose2d().getTranslation());
+        }
+
+        if (numTags == 0) {
+            return VisionConstants.singleTagDevs;
+        }
+
+        // One or more tags visible, run the full heuristic.
+        avgDist /= numTags;
+        // Decrease std devs if multiple targets are visible
+        if (numTags > 1) estStdDevs = VisionConstants.multiTagDevs;
+        // Increase std devs based on (average) distance
+        if (numTags == 1 && avgDist > 4)
+            estStdDevs = VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+        else estStdDevs = estStdDevs.times(1 + (avgDist * avgDist / 30));
+        return estStdDevs;
     }
 }
