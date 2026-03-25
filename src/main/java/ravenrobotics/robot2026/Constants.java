@@ -38,7 +38,7 @@ public class Constants {
     public static class PivotConstants {
         public static final int PIVOT_MOTOR = 20;
 
-        public static final double PIVOT_KP = 1.0;
+        public static final double PIVOT_KP = 2.8;
         public static final double PIVOT_KI = 0.0;
         public static final double PIVOT_KD = 0.5;
 
@@ -60,12 +60,23 @@ public class Constants {
 
         public static final int COLUMN_MOTOR = 8;
 
-        public static final double FLYWHEEL_KP = 0.025;
+        public static final int JAM_DETECT_CYCLES = 10;          // 200ms at 50Hz
+        public static final int REVERSE_DURATION = 15;            // 300ms at 50Hz
+        public static final double JAM_CURRENT_THRESHOLD = 30.0;  // amps
+        public static final double JAM_VELOCITY_THRESHOLD = 50.0;  // RPM
+
+        public static final double FLYWHEEL_KP = 0.0012;
         public static final double FLYWHEEL_KI = 0.0;
-        public static final double FLYWHEEL_KD = 4.75;
+        public static final double FLYWHEEL_KD = 0.015;
+
+        public static final double FLYWHEEL_KS = 1.25;
+        public static final double FLYWHEEL_KV = 0.0015;
+        public static final double FLYWHEEL_KA = 0.0;
 
         public static final double FLYWHEEL_HUB_IDLE = 1500;
         public static final double FLYWHEEL_PASS_IDLE = 3000;
+
+        public static final double FLYWHEEL_SETPOINT_TOLERANCE = 400;
 
         public static final Translation2d BLUE_HUB_POS = new Translation2d(Meters.of(4.625), Meters.of(4.03));
         public static final Translation2d RED_HUB_POS = new Translation2d(Meters.of(11.91), Meters.of(4.03));
@@ -80,16 +91,16 @@ public class Constants {
         public static final InterpolatingMatrixTreeMap<Double, N2, N1> PASS_SHOT_TREE = new InterpolatingMatrixTreeMap<>();
 
         static {
-            HUB_SHOT_TREE.put(4.789, VecBuilder.fill(4150, 0.039));
-            HUB_SHOT_TREE.put(0.83, VecBuilder.fill(3200, 0));
-            HUB_SHOT_TREE.put(2.53, VecBuilder.fill(3500, 0.037));
-            HUB_SHOT_TREE.put(1.945, VecBuilder.fill(3000, 0.036));
-            HUB_SHOT_TREE.put(3.07, VecBuilder.fill(3500, 0.047));
+            HUB_SHOT_TREE.put(4.789, VecBuilder.fill(3900, 0.039));
+            HUB_SHOT_TREE.put(0.83, VecBuilder.fill(2950, 0));
+            HUB_SHOT_TREE.put(2.53, VecBuilder.fill(3250, 0.037));
+            HUB_SHOT_TREE.put(1.945, VecBuilder.fill(2750, 0.036));
+            HUB_SHOT_TREE.put(3.07, VecBuilder.fill(3250, 0.047));
 
-            PASS_SHOT_TREE.put(5.4, VecBuilder.fill(4500, 0.04));
-            PASS_SHOT_TREE.put(7.96, VecBuilder.fill(4500, 0.07));
-            PASS_SHOT_TREE.put(11.76, VecBuilder.fill(5500, 0.08));
-            PASS_SHOT_TREE.put(5.5, VecBuilder.fill(4000, 0.065));
+            PASS_SHOT_TREE.put(5.4, VecBuilder.fill(4250, 0.04));
+            PASS_SHOT_TREE.put(7.96, VecBuilder.fill(4250, 0.07));
+            PASS_SHOT_TREE.put(11.76, VecBuilder.fill(5250, 0.08));
+            PASS_SHOT_TREE.put(5.5, VecBuilder.fill(3750, 0.065));
         }
     }
 
@@ -102,29 +113,29 @@ public class Constants {
         public static final String FLYWHEEL_CAMERA = "flywheelCamera";
         public static final String HOPPER_CAMERA = "hopperCamera";
 
-        public static final Transform3d FLYWHEEL_CAMERA_OFFSET = new Transform3d(
+        public static final Transform3d RIGHT_CAMERA_OFFSET = new Transform3d(
             Inches.of(-1.210522),
-            Inches.of(-0.026610),
+            Inches.of(1.72339),
             Inches.of(22.136655),
             new Rotation3d(
                 Degrees.of(0),
-                Degrees.of(17),
+                Degrees.of(18.1),
                 Degrees.of(0)
             )
         );
 
-        public static final Transform3d HOPPER_CAMERA_OFFSET = new Transform3d(
-            Inches.of(-0.635606),
-            Inches.of(-0.026610),
-            Inches.of(14.990187),
+        public static final Transform3d LEFT_CAMERA_OFFSET = new Transform3d(
+            Inches.of(-1.210522),
+            Inches.of(-1.77661),
+            Inches.of(22.136655),
             new Rotation3d(
                 Degrees.of(0),
-                Degrees.of(25),
+                Degrees.of(2),
                 Degrees.of(0)
             )
         );
 
-        public static final Matrix<N3, N1> singleTagDevs = VecBuilder.fill(4, 4, 8);
-        public static final Matrix<N3, N1> multiTagDevs = VecBuilder.fill(0.5, 0.5, 1);
+        public static final Matrix<N3, N1> singleTagDevs = VecBuilder.fill(4.5, 4.5, 8.5);
+        public static final Matrix<N3, N1> multiTagDevs = VecBuilder.fill(3, 3, 2.5);
     }
 }

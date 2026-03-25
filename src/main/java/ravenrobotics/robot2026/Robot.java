@@ -17,7 +17,9 @@ import dev.doglog.DogLog;
 import dev.doglog.DogLogOptions;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.net.WebServer;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -55,7 +57,8 @@ public class Robot extends TimedRobot {
 
     @Override
     public void disabledInit() {
-        robotContainer.resetSS();
+        //robotContainer.resetSS();
+        WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
     }
 
     @Override
@@ -140,7 +143,9 @@ public class Robot extends TimedRobot {
     }
 
     @Override
-    public void disabledExit() {}
+    public void disabledExit() {
+        WebServer.stop(5800);
+    }
 
     @Override
     public void autonomousInit() {

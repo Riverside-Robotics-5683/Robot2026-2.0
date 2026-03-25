@@ -16,6 +16,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -58,6 +59,7 @@ public class Superstructure extends SubsystemBase {
         IDLE_INTAKE_OUT,
         OUTTAKE,
         SHOOT,
+        UNJAM
     }
 
     public Superstructure(
@@ -104,6 +106,7 @@ public class Superstructure extends SubsystemBase {
             case IDLE_INTAKE_OUT -> idleIntakeState();
             case OUTTAKE -> outtakeState();
             case SHOOT -> handleShoot();
+            case UNJAM -> unjamState();
         }
     }
 
@@ -134,6 +137,12 @@ public class Superstructure extends SubsystemBase {
         hoodSubsystem.stopActuators();
 
         pivotSubsystem.setPivot(PivotPosition.PIVOT_STOP);
+    }
+
+    private void unjamState() {
+        feederSubsystem.setFeeder(FeederDirection.FEEDER_OUT);
+        intakeSubsystem.setIntakeDirection(IntakeDirection.INTAKE_OUT);
+        flywheelSubsystem.runColumn(true);
     }
 
     private void idleState() {
@@ -191,6 +200,7 @@ public class Superstructure extends SubsystemBase {
         if (currentSide.get() == currentAlliance.get()) {
             flywheelSubsystem.idleFlywheel(FlywheelIdleState.HUB);
         } else {
+            driveSubsystem.driveOverride(false);
             flywheelSubsystem.idleFlywheel(FlywheelIdleState.PASS);
         }
     }
@@ -235,6 +245,8 @@ public class Superstructure extends SubsystemBase {
         Rotation2d targetAngle = new Rotation2d(
             hubPos.getX() - currentPose.getX(),
             hubPos.getY() - currentPose.getY());
+
+        driveSubsystem.driveOverride(true);
 
         driveSubsystem.setControl(rotationRequest.withTargetDirection(targetAngle));
 
@@ -337,6 +349,10 @@ public class Superstructure extends SubsystemBase {
     @Override
     public void periodic() {
         updateState();
+
+        if (currentState != SuperstructureState.SHOOT) {
+            driveSubsystem.driveOverride(false);
+        }
 
         DogLog.log("MatchTime", DriverStation.getMatchTime(), Seconds);
 

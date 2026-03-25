@@ -25,8 +25,8 @@ public class MotorConfigs {
         pivotConfig.MotorOutput.withInverted(InvertedValue.Clockwise_Positive)
             .withNeutralMode(NeutralModeValue.Brake);
         pivotConfig.CurrentLimits
-            .withStatorCurrentLimit(20)
-            .withSupplyCurrentLimit(20);
+            .withStatorCurrentLimit(35)
+            .withSupplyCurrentLimit(35);
         pivotConfig.Slot0
             .withKP(PivotConstants.PIVOT_KP)
             .withKI(PivotConstants.PIVOT_KI)
@@ -45,14 +45,18 @@ public class MotorConfigs {
         feederConfig.smartCurrentLimit(50).idleMode(IdleMode.kCoast).inverted(true);
 
         flywheelConfig.smartCurrentLimit(50)
-            .closedLoopRampRate(2)
+            .closedLoopRampRate(1 / 20)
             .idleMode(IdleMode.kCoast)
             .inverted(true);
-        flywheelConfig.closedLoop.outputRange(-1, 1)
+        flywheelConfig.closedLoop.outputRange(0, 1)
             .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
             .p(FlywheelConstants.FLYWHEEL_KP)
             .i(FlywheelConstants.FLYWHEEL_KI)
             .d(FlywheelConstants.FLYWHEEL_KD);
+        
+        flywheelConfig.closedLoop.feedForward.kS(FlywheelConstants.FLYWHEEL_KS)
+            .kV(FlywheelConstants.FLYWHEEL_KV)
+            .kA(FlywheelConstants.FLYWHEEL_KA);
 
         columnConfig.smartCurrentLimit(50)
             .idleMode(IdleMode.kCoast)
@@ -62,6 +66,11 @@ public class MotorConfigs {
             .inverted(false)
             .closedLoopRampRate(1)
             .idleMode(IdleMode.kCoast);
+
+        actuatorConfig.softLimit.forwardSoftLimit(0.08)
+        .reverseSoftLimit(0.005)
+        .forwardSoftLimitEnabled(true)
+        .reverseSoftLimitEnabled(true);
 
         actuatorConfig.closedLoop.feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
             .outputRange(-1, 1)

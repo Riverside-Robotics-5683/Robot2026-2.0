@@ -29,6 +29,7 @@ public class FlywheelSubsystem extends SubsystemBase {
 
     public double flywheelSpeed = 3000.0;
 
+    private double commandedSetpoint = 0;
     private boolean isIdle = true;
 
     public enum FlywheelState {
@@ -68,14 +69,21 @@ public class FlywheelSubsystem extends SubsystemBase {
 
     public void runFlywheel(double speed) {
         isIdle = false;
+        commandedSetpoint = speed;
         centerFlywheelController.setSetpoint(speed, ControlType.kVelocity);
     }
 
     public void idleFlywheel(FlywheelIdleState state) {
         isIdle = true;
         switch (state) {
-            case HUB -> centerFlywheelController.setSetpoint(FlywheelConstants.FLYWHEEL_HUB_IDLE, ControlType.kVelocity);
-            case PASS -> centerFlywheelController.setSetpoint(FlywheelConstants.FLYWHEEL_PASS_IDLE, ControlType.kVelocity);
+            case HUB:
+                commandedSetpoint = FlywheelConstants.FLYWHEEL_HUB_IDLE;
+                centerFlywheelController.setSetpoint(FlywheelConstants.FLYWHEEL_HUB_IDLE, ControlType.kVelocity);
+                break;
+            case PASS:
+                commandedSetpoint = FlywheelConstants.FLYWHEEL_PASS_IDLE;
+                centerFlywheelController.setSetpoint(FlywheelConstants.FLYWHEEL_PASS_IDLE, ControlType.kVelocity);
+                break;
         }
     }
 
@@ -84,15 +92,11 @@ public class FlywheelSubsystem extends SubsystemBase {
     }
 
     public boolean atSetpoint() {
-        return !isIdle && (Math.abs(centerFlywheelController.getSetpoint() - centerFlywheelEncoder.getVelocity()) < 400);
+        return !isIdle && (Math.abs(commandedSetpoint - centerFlywheelEncoder.getVelocity()) < FlywheelConstants.FLYWHEEL_SETPOINT_TOLERANCE);
     }
 
     public void runColumn(boolean isReverse) {
-        if (isReverse) {
-            columnMotor.set(-1);
-        } else {
-            columnMotor.set(1);
-        }
+        columnMotor.set(isReverse ? -1 : 1);
     }
 
     public void stopColumn() {

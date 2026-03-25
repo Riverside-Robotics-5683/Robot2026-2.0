@@ -5,11 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build and Deploy Commands
 
 ```bash
-./gradlew build              # Compile the robot code
-./gradlew deploy             # Deploy to RoboRIO (requires network connection to robot)
-./gradlew simulationDebug    # Run simulation with GUI
-./gradlew test               # Run unit tests (JUnit 5)
+./gradlew -Dorg.gradle.java.home=$HOME/wpilib/2026/jdk build              # Compile the robot code
+./gradlew -Dorg.gradle.java.home=$HOME/wpilib/2026/jdk deploy             # Deploy to RoboRIO (requires network connection to robot)
+./gradlew -Dorg.gradle.java.home=$HOME/wpilib/2026/jdk simulationDebug    # Run simulation with GUI
+./gradlew -Dorg.gradle.java.home=$HOME/wpilib/2026/jdk test               # Run unit tests (JUnit 5)
 ```
+
+> **Note:** All `./gradlew` commands must include `-Dorg.gradle.java.home=$HOME/wpilib/2026/jdk` to use the WPILib JDK.
 
 Team number: **5683**. Main class: `ravenrobotics.robot2026.Main`.
 

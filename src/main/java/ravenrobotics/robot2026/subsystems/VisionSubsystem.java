@@ -49,8 +49,8 @@ public class VisionSubsystem extends SubsystemBase {
         flywheelCamera = new PhotonCamera(VisionConstants.FLYWHEEL_CAMERA);
         hopperCamera = new PhotonCamera(VisionConstants.HOPPER_CAMERA);
 
-        flywheelPoseEstimator = new PhotonPoseEstimator(fieldLayout, VisionConstants.FLYWHEEL_CAMERA_OFFSET);
-        hopperPoseEstimator = new PhotonPoseEstimator(fieldLayout, VisionConstants.HOPPER_CAMERA_OFFSET);
+        flywheelPoseEstimator = new PhotonPoseEstimator(fieldLayout, VisionConstants.RIGHT_CAMERA_OFFSET);
+        hopperPoseEstimator = new PhotonPoseEstimator(fieldLayout, VisionConstants.LEFT_CAMERA_OFFSET);
 
         this.poseConsumer = estimatedPoseConsumer;
 

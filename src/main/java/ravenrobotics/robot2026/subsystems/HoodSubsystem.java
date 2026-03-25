@@ -40,9 +40,21 @@ public class HoodSubsystem extends SubsystemBase {
 
         if (currentPosition < position) {
             rightActuator.set(0.75);
+            softLimit(true);
         } else if (currentPosition > position) {
             rightActuator.set(-0.75);
+            softLimit(false);
         } else {
+            stopActuators();
+        }
+    }
+
+    private void softLimit(boolean goingUp) {
+        double currentPosition = hoodEncoder.getPosition();
+
+        if (goingUp && currentPosition > 0.08) {
+            stopActuators();
+        } else if (!goingUp && currentPosition <= 0.005) {
             stopActuators();
         }
     }
