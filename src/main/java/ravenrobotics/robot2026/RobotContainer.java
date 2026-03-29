@@ -7,6 +7,7 @@ package ravenrobotics.robot2026;
 import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveRequest.RobotCentric;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.ctre.phoenix6.swerve.SwerveRequest;
@@ -17,13 +18,11 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import ravenrobotics.robot2026.Superstructure.SuperstructureState;
 import ravenrobotics.robot2026.generated.TunerConstants;
 import ravenrobotics.robot2026.subsystems.CommandSwerveDrivetrain;
 import ravenrobotics.robot2026.subsystems.PivotSubsystem;
 import ravenrobotics.robot2026.subsystems.VisionSubsystem;
-import ravenrobotics.robot2026.subsystems.IntakeSubsystem.IntakeDirection;
 import ravenrobotics.robot2026.subsystems.PivotSubsystem.PivotPosition;
 import ravenrobotics.robot2026.subsystems.IntakeSubsystem;
 import ravenrobotics.robot2026.subsystems.FeederSubsystem;
@@ -35,9 +34,13 @@ public class RobotContainer {
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
     /* Setting up bindings for necessary control of the swerve drive platform */
-    private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
+    private final SwerveRequest.FieldCentric driveFieldRelative = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
+    private final SwerveRequest.RobotCentric driveRobotRelative = new RobotCentric()
+            .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1)
+            .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
 
     private final DriveTelemetry logger = new DriveTelemetry(MaxSpeed);
@@ -60,6 +63,8 @@ public class RobotContainer {
         hoodSubsystem,
         intakeSubsystem,
         pivotSubsystem);
+
+    private boolean isFieldRelative = true;
 
     private SendableChooser<Command> autoChooser;
 
@@ -87,11 +92,17 @@ public class RobotContainer {
         // and Y is defined as to the left according to WPILib convention.
         drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(-joystick.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+            drivetrain.applyRequest(() -> {
+                if (isFieldRelative) {
+                    return driveFieldRelative.withVelocityX(-joystick.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
                     .withVelocityY(-joystick.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-                    .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
-            )
+                    .withRotationalRate(-joystick.getRightX() * MaxAngularRate); // Drive counterclockwise with negative X (left)
+                } else {
+                    return driveRobotRelative.withVelocityX(-joystick.getLeftY() * MaxSpeed)
+                    .withVelocityY(-joystick.getLeftX() * MaxSpeed)
+                    .withRotationalRate(-joystick.getRightX() * MaxAngularRate);
+                }
+            })
         );
 
         // Idle while the robot is disabled. This ensures the configured
@@ -109,19 +120,26 @@ public class RobotContainer {
         // joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
         // joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
-        joystick.leftTrigger().whileTrue(superStructure.setStateCommand(SuperstructureState.INTAKE)).onFalse(superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
+        joystick.leftTrigger().onTrue(superStructure.setStateCommand(SuperstructureState.INTAKE)).onFalse(superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
 
         joystick.y().onTrue(superStructure.setStateCommand(SuperstructureState.IDLE));
 
-        // joystick.povUp().whileTrue(new InstantCommand(() -> hoodSubsystem.runActuators(false))).onFalse(new InstantCommand(() -> hoodSubsystem.stopActuators()));
-        // joystick.povDown().whileTrue(new InstantCommand(() -> hoodSubsystem.runActuators(true))).onFalse(new InstantCommand(() -> hoodSubsystem.stopActuators()));
+        joystick.povUp().whileTrue(new InstantCommand(() -> hoodSubsystem.runActuators(false))).onFalse(new InstantCommand(() -> hoodSubsystem.stopActuators()));
+        joystick.povDown().whileTrue(new InstantCommand(() -> hoodSubsystem.runActuators(true))).onFalse(new InstantCommand(() -> hoodSubsystem.stopActuators()));
 
         // Reset the field-centric heading on left bumper press.
         joystick.back().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
-        joystick.leftBumper().onTrue(superStructure.setStateCommand(SuperstructureState.UNJAM)).onFalse(superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
+        joystick.leftBumper().onTrue(superStructure.setStateCommand(SuperstructureState.UNJAM)).onFalse(superStructure.setToPreviousStateCommand());
 
-        joystick.rightTrigger().whileTrue(superStructure.setStateCommand(SuperstructureState.SHOOT)).onFalse(superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
+        joystick.rightTrigger().onTrue(superStructure.setStateCommand(SuperstructureState.SHOOT)).onFalse(superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
+        joystick.rightBumper().onTrue(superStructure.setStateCommand(SuperstructureState.DUMB_SHOOT)).onFalse(superStructure.setStateCommand(SuperstructureState.IDLE_INTAKE_OUT));
+
+        joystick.rightBumper().onTrue(new InstantCommand( () -> {
+            isFieldRelative = false;
+        })).onFalse(new InstantCommand(() -> {
+            isFieldRelative = true;
+        }));
 
         // Set the brake
         joystick.x().onTrue(drivetrain.runOnce(() -> drivetrain.setControl(brake)));

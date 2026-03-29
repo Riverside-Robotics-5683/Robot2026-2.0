@@ -58,9 +58,10 @@ public class MotorConfigs {
             .kV(FlywheelConstants.FLYWHEEL_KV)
             .kA(FlywheelConstants.FLYWHEEL_KA);
 
-        columnConfig.smartCurrentLimit(50)
+        columnConfig.smartCurrentLimit(60)
             .idleMode(IdleMode.kCoast)
-            .inverted(false);
+            .inverted(false)
+            .voltageCompensation(12.0);
 
         actuatorConfig.smartCurrentLimit(1, 1)
             .inverted(false)

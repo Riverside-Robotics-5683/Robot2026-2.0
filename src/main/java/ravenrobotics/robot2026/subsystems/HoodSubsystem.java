@@ -28,7 +28,7 @@ public class HoodSubsystem extends SubsystemBase {
         rightActuator = new SparkMax(HoodConstants.RIGHT_ACTUATOR, MotorType.kBrushed);
 
         rightActuator.configure(MotorConfigs.actuatorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-        leftActuator.configure(MotorConfigs.actuatorConfig.follow(rightActuator), ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        leftActuator.configure(MotorConfigs.actuatorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         hoodEncoder = rightActuator.getAbsoluteEncoder();
     }
@@ -40,9 +40,11 @@ public class HoodSubsystem extends SubsystemBase {
 
         if (currentPosition < position) {
             rightActuator.set(0.75);
+            leftActuator.set(0.75);
             softLimit(true);
         } else if (currentPosition > position) {
             rightActuator.set(-0.75);
+            leftActuator.set(-0.75);
             softLimit(false);
         } else {
             stopActuators();
@@ -62,8 +64,10 @@ public class HoodSubsystem extends SubsystemBase {
     public void runActuators(boolean reverse) {
         if (reverse) {
             rightActuator.set(-1);
+            leftActuator.set(-1);
         } else {
             rightActuator.set(1);
+            leftActuator.set(1);
         }
     }
 

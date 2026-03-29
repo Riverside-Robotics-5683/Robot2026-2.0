@@ -60,16 +60,11 @@ public class Constants {
 
         public static final int COLUMN_MOTOR = 8;
 
-        public static final int JAM_DETECT_CYCLES = 10;          // 200ms at 50Hz
-        public static final int REVERSE_DURATION = 15;            // 300ms at 50Hz
-        public static final double JAM_CURRENT_THRESHOLD = 30.0;  // amps
-        public static final double JAM_VELOCITY_THRESHOLD = 50.0;  // RPM
-
         public static final double FLYWHEEL_KP = 0.0012;
         public static final double FLYWHEEL_KI = 0.0;
         public static final double FLYWHEEL_KD = 0.015;
 
-        public static final double FLYWHEEL_KS = 1.25;
+        public static final double FLYWHEEL_KS = 1.24;
         public static final double FLYWHEEL_KV = 0.0015;
         public static final double FLYWHEEL_KA = 0.0;
 
@@ -91,11 +86,11 @@ public class Constants {
         public static final InterpolatingMatrixTreeMap<Double, N2, N1> PASS_SHOT_TREE = new InterpolatingMatrixTreeMap<>();
 
         static {
-            HUB_SHOT_TREE.put(4.789, VecBuilder.fill(3900, 0.039));
-            HUB_SHOT_TREE.put(0.83, VecBuilder.fill(2950, 0));
-            HUB_SHOT_TREE.put(2.53, VecBuilder.fill(3250, 0.037));
-            HUB_SHOT_TREE.put(1.945, VecBuilder.fill(2750, 0.036));
-            HUB_SHOT_TREE.put(3.07, VecBuilder.fill(3250, 0.047));
+            HUB_SHOT_TREE.put(4.789, VecBuilder.fill(3935, 0.039));
+            HUB_SHOT_TREE.put(0.83, VecBuilder.fill(2985, 0));
+            HUB_SHOT_TREE.put(2.53, VecBuilder.fill(3285, 0.037));
+            HUB_SHOT_TREE.put(1.945, VecBuilder.fill(2785, 0.036));
+            HUB_SHOT_TREE.put(3.07, VecBuilder.fill(3285, 0.047));
 
             PASS_SHOT_TREE.put(5.4, VecBuilder.fill(4250, 0.04));
             PASS_SHOT_TREE.put(7.96, VecBuilder.fill(4250, 0.07));
@@ -113,7 +108,7 @@ public class Constants {
         public static final String FLYWHEEL_CAMERA = "flywheelCamera";
         public static final String HOPPER_CAMERA = "hopperCamera";
 
-        public static final Transform3d RIGHT_CAMERA_OFFSET = new Transform3d(
+        public static final Transform3d FLYWHEEL_CAMERA_OFFSET = new Transform3d(
             Inches.of(-1.210522),
             Inches.of(1.72339),
             Inches.of(22.136655),
@@ -124,7 +119,7 @@ public class Constants {
             )
         );
 
-        public static final Transform3d LEFT_CAMERA_OFFSET = new Transform3d(
+        public static final Transform3d HOPPER_CAMERA_OFFSET = new Transform3d(
             Inches.of(-1.210522),
             Inches.of(-1.77661),
             Inches.of(22.136655),

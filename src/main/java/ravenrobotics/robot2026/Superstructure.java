@@ -16,7 +16,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -59,6 +58,7 @@ public class Superstructure extends SubsystemBase {
         IDLE_INTAKE_OUT,
         OUTTAKE,
         SHOOT,
+        DUMB_SHOOT,
         UNJAM
     }
 
@@ -98,6 +98,10 @@ public class Superstructure extends SubsystemBase {
         return this.runOnce(() -> setState(newState));
     }
 
+    public Command setToPreviousStateCommand() {
+        return this.runOnce(() -> setState(previousState));
+    }
+
     private void updateState() {
         switch (currentState) {
             case STOP -> stopState();
@@ -106,6 +110,7 @@ public class Superstructure extends SubsystemBase {
             case IDLE_INTAKE_OUT -> idleIntakeState();
             case OUTTAKE -> outtakeState();
             case SHOOT -> handleShoot();
+            case DUMB_SHOOT -> dumbShootState();
             case UNJAM -> unjamState();
         }
     }
@@ -221,7 +226,24 @@ public class Superstructure extends SubsystemBase {
         flywheelSubsystem.runFlywheel(shotParams.get(0, 0));
         hoodSubsystem.setPosition(shotParams.get(1, 0));
 
-        if (hoodSubsystem.atSetpoint() && flywheelSubsystem.atSetpoint()) {
+        if (flywheelSubsystem.atSetpoint()) {
+            hoodSubsystem.stopActuators();
+
+            flywheelSubsystem.runColumn(false);
+            feederSubsystem.setFeeder(FeederDirection.FEEDER_IN);
+
+            cycleShakePivot();
+        } else {
+            flywheelSubsystem.runColumn(true);
+            feederSubsystem.setFeeder(FeederDirection.FEEDER_STOP);
+        }
+    }
+
+    private void dumbShootState() {
+        flywheelSubsystem.runFlywheel(3500);
+        hoodSubsystem.setPosition(0.04);
+
+        if (flywheelSubsystem.atSetpoint()) {
             hoodSubsystem.stopActuators();
 
             flywheelSubsystem.runColumn(false);
@@ -246,16 +268,20 @@ public class Superstructure extends SubsystemBase {
             hubPos.getX() - currentPose.getX(),
             hubPos.getY() - currentPose.getY());
 
+        if (alliance == Alliance.Red) {
+            targetAngle = targetAngle.rotateBy(Rotation2d.k180deg);
+        }
+
         driveSubsystem.driveOverride(true);
 
         driveSubsystem.setControl(rotationRequest.withTargetDirection(targetAngle));
 
         Matrix<N2, N1> shotParams = FlywheelConstants.HUB_SHOT_TREE.get(getDistanceToHub());
 
-        flywheelSubsystem.runFlywheel(shotParams.get(0, 0));
+        flywheelSubsystem.runFlywheel(shotParams.get(0, 0) - 10);
         hoodSubsystem.setPosition(shotParams.get(1, 0));
 
-        if (rotationRequest.HeadingController.atSetpoint() && flywheelSubsystem.atSetpoint() && hoodSubsystem.atSetpoint()) {
+        if (rotationRequest.HeadingController.atSetpoint() && flywheelSubsystem.atSetpoint()) {
             hoodSubsystem.stopActuators();
 
             driveSubsystem.setControl(new SwerveRequest.SwerveDriveBrake());
