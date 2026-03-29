@@ -17,7 +17,7 @@ public class MotorConfigs {
 
     public static final SparkFlexConfig feederConfig = new SparkFlexConfig();
     public static final SparkFlexConfig flywheelConfig = new SparkFlexConfig();
-    public static final SparkFlexConfig columnConfig = new SparkFlexConfig();
+    public static final TalonFXConfiguration columnConfig = new TalonFXConfiguration();
 
     public static final SparkMaxConfig actuatorConfig = new SparkMaxConfig();
 
@@ -58,10 +58,12 @@ public class MotorConfigs {
             .kV(FlywheelConstants.FLYWHEEL_KV)
             .kA(FlywheelConstants.FLYWHEEL_KA);
 
-        columnConfig.smartCurrentLimit(60)
-            .idleMode(IdleMode.kCoast)
-            .inverted(false)
-            .voltageCompensation(12.0);
+        columnConfig.MotorOutput
+            .withInverted(InvertedValue.CounterClockwise_Positive)
+            .withNeutralMode(NeutralModeValue.Coast);
+        columnConfig.CurrentLimits
+            .withStatorCurrentLimit(50)
+            .withSupplyCurrentLimit(50);
 
         actuatorConfig.smartCurrentLimit(1, 1)
             .inverted(false)

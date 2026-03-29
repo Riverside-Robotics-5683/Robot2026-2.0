@@ -3,6 +3,9 @@ package ravenrobotics.robot2026.subsystems;
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.RPM;
 
+import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.hardware.TalonFX;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -12,6 +15,8 @@ import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import dev.doglog.DogLog;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import ravenrobotics.robot2026.MotorConfigs;
 import ravenrobotics.robot2026.Constants.FlywheelConstants;
@@ -20,12 +25,14 @@ public class FlywheelSubsystem extends SubsystemBase {
     
     private final SparkFlex leftFlywheel, centerFlywheel, rightFlywheel;
 
-    private final SparkFlex columnMotor;
+    private final TalonFX columnMotor;
 
     private final RelativeEncoder centerFlywheelEncoder;
     private final SparkClosedLoopController centerFlywheelController;
 
-    private final RelativeEncoder columnEncoder;
+    private final StatusSignal<AngularVelocity> columnVelocitySignal;
+    private final StatusSignal<Current> columnSupplyCurrentSignal;
+    private final StatusSignal<Current> columnStatorCurrentSignal;
 
     public double flywheelSpeed = 3000.0;
 
@@ -55,10 +62,21 @@ public class FlywheelSubsystem extends SubsystemBase {
         centerFlywheelEncoder = centerFlywheel.getEncoder();
         centerFlywheelController = centerFlywheel.getClosedLoopController();
 
-        columnMotor = new SparkFlex(FlywheelConstants.COLUMN_MOTOR, MotorType.kBrushless);
-        columnMotor.configure(MotorConfigs.columnConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        columnMotor = new TalonFX(FlywheelConstants.COLUMN_MOTOR);
 
-        columnEncoder = columnMotor.getEncoder();
+        columnMotor.getConfigurator().apply(MotorConfigs.columnConfig);
+
+        columnVelocitySignal = columnMotor.getVelocity();
+
+        columnStatorCurrentSignal = columnMotor.getStatorCurrent();
+        columnSupplyCurrentSignal = columnMotor.getSupplyCurrent();
+
+        BaseStatusSignal.setUpdateFrequencyForAll(50,
+            columnVelocitySignal,
+            columnStatorCurrentSignal,
+            columnSupplyCurrentSignal);
+
+        columnMotor.optimizeBusUtilization();
 
         DogLog.tunable("Flywheel/ManualSpeed", flywheelSpeed, (newSpeed) -> {
             this.flywheelSpeed = newSpeed;
@@ -108,16 +126,23 @@ public class FlywheelSubsystem extends SubsystemBase {
         double flywheelVelocity;
         double leftFlywheelCurrent, centerFlywheelCurrent, rightFlywheelCurrent;
 
-        double columnVelocity, columnCurrent;
+        double columnVelocity, columnSupplyCurrent, columnStatorCurrent;
+
+        BaseStatusSignal.refreshAll(
+            columnStatorCurrentSignal,
+            columnSupplyCurrentSignal,
+            columnVelocitySignal);
+
+        columnVelocity = columnVelocitySignal.getValueAsDouble();
+
+        columnSupplyCurrent = columnSupplyCurrentSignal.getValueAsDouble();
+        columnStatorCurrent = columnStatorCurrentSignal.getValueAsDouble();
 
         flywheelVelocity = centerFlywheelEncoder.getVelocity();
 
         leftFlywheelCurrent = leftFlywheel.getOutputCurrent();
         centerFlywheelCurrent = centerFlywheel.getOutputCurrent();
         rightFlywheelCurrent = rightFlywheel.getOutputCurrent();
-
-        columnVelocity = columnEncoder.getVelocity();
-        columnCurrent = columnMotor.getOutputCurrent();
 
         DogLog.log("Flywheel/Velocity", flywheelVelocity, RPM);
 
@@ -126,7 +151,8 @@ public class FlywheelSubsystem extends SubsystemBase {
         DogLog.log("Flywheel/Current/Right", rightFlywheelCurrent, Amps);
 
         DogLog.log("Flywheel/Column/Velocity", columnVelocity, RPM);
-        DogLog.log("Flywheel/Column/Current", columnCurrent, Amps);
+        DogLog.log("Flywheel/Column/SupplyCurrent", columnSupplyCurrent, Amps);
+        DogLog.log("Flywheel/Column/StatorCurrent", columnStatorCurrent, Amps);
 
         DogLog.log("Flywheel/AtSetpoint", atSetpoint());
     }
