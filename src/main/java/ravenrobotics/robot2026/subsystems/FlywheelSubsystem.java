@@ -81,8 +81,6 @@ public class FlywheelSubsystem extends SubsystemBase {
         DogLog.tunable("Flywheel/ManualSpeed", flywheelSpeed, (newSpeed) -> {
             this.flywheelSpeed = newSpeed;
         });
-
-        this.register();
     }
 
     public void runFlywheel(double speed) {

@@ -53,8 +53,6 @@ public class VisionSubsystem extends SubsystemBase {
         hopperPoseEstimator = new PhotonPoseEstimator(fieldLayout, VisionConstants.HOPPER_CAMERA_OFFSET);
 
         this.poseConsumer = estimatedPoseConsumer;
-
-        this.register();
     }
 
     @Override

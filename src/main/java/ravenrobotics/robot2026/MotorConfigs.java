@@ -62,8 +62,8 @@ public class MotorConfigs {
             .withInverted(InvertedValue.CounterClockwise_Positive)
             .withNeutralMode(NeutralModeValue.Coast);
         columnConfig.CurrentLimits
-            .withStatorCurrentLimit(50)
-            .withSupplyCurrentLimit(50);
+            .withStatorCurrentLimit(40)
+            .withSupplyCurrentLimit(40);
 
         actuatorConfig.smartCurrentLimit(1, 1)
             .inverted(false)

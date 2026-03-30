@@ -98,9 +98,6 @@ public class PivotSubsystem extends SubsystemBase {
 
         // Optimize bus usage for the pivot and intake motors.
         ParentDevice.optimizeBusUtilizationForAll(pivotMotor);
-
-        // Register subsystem with CommandScheduler.
-        this.register();
     }
 
     public void setPivot(PivotPosition position) {

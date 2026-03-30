@@ -56,8 +56,6 @@ public class FeederSubsystem extends SubsystemBase {
 
         // Get relative encoder for feeder.
         feederEncoder = feederMotor.getEncoder();
-
-        this.register();
     }
     
     public void setFeeder(FeederDirection direction) {

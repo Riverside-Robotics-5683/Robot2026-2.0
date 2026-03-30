@@ -45,7 +45,7 @@ public class Constants {
         public static final double PIVOT_IN = 0;
         public static final double PIVOT_OUT = 15.8;
 
-        public static final double PIVOT_SHOOT_HIGH = 5;
+        public static final double PIVOT_SHOOT_HIGH = 6.1;
         public static final double PIVOT_SHOOT_LOW = 14;
     }
 
@@ -58,7 +58,7 @@ public class Constants {
         public static final int CENTER_FLYWHEEL_MOTOR = 6;
         public static final int RIGHT_FLYWHEEL_MOTOR = 7;
 
-        public static final int COLUMN_MOTOR = 8;
+        public static final int COLUMN_MOTOR = 22;
 
         public static final double FLYWHEEL_KP = 0.0012;
         public static final double FLYWHEEL_KI = 0.0;
@@ -86,11 +86,11 @@ public class Constants {
         public static final InterpolatingMatrixTreeMap<Double, N2, N1> PASS_SHOT_TREE = new InterpolatingMatrixTreeMap<>();
 
         static {
-            HUB_SHOT_TREE.put(4.789, VecBuilder.fill(3935, 0.039));
-            HUB_SHOT_TREE.put(0.83, VecBuilder.fill(2985, 0));
-            HUB_SHOT_TREE.put(2.53, VecBuilder.fill(3285, 0.037));
-            HUB_SHOT_TREE.put(1.945, VecBuilder.fill(2785, 0.036));
-            HUB_SHOT_TREE.put(3.07, VecBuilder.fill(3285, 0.047));
+            HUB_SHOT_TREE.put(4.789, VecBuilder.fill(3920, 0.039));
+            HUB_SHOT_TREE.put(0.83, VecBuilder.fill(3200, 0));
+            HUB_SHOT_TREE.put(2.53, VecBuilder.fill(3650, 0.037));
+            HUB_SHOT_TREE.put(1.945, VecBuilder.fill(2800, 0.036));
+            HUB_SHOT_TREE.put(3.07, VecBuilder.fill(3400, 0.047));
 
             PASS_SHOT_TREE.put(5.4, VecBuilder.fill(4250, 0.04));
             PASS_SHOT_TREE.put(7.96, VecBuilder.fill(4250, 0.07));
